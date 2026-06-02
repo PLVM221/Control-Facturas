@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Control de facturación</title>
+    <link rel="stylesheet" href="styles.css?v=20260602-1636" />
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script defer src="app.js?v=20260602-1632"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-label="Resumen">
+        <div>
+          <p class="eyebrow">Mercado Pago vs Odoo</p>
+          <h1>Control de facturación</h1>
+        </div>
+        <button class="ghost-button" id="resetButton" type="button">Limpiar</button>
+      </section>
+
+      <section class="upload-grid" aria-label="Carga de archivos">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Mercado Pago</h2>
+            <span class="status-pill" id="mpStatus">Sin archivo</span>
+          </div>
+          <label class="file-drop">
+            <input id="mpFile" type="file" accept=".csv,.txt,.xls,.xlsx" />
+            <span>Seleccionar archivo</span>
+            <small>CSV, TXT, XLS o XLSX</small>
+          </label>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Odoo</h2>
+            <span class="status-pill" id="sysStatus">Sin archivo</span>
+          </div>
+          <label class="file-drop">
+            <input id="sysFile" type="file" accept=".csv,.txt,.xls,.xlsx" />
+            <span>Seleccionar archivo</span>
+            <small>CSV, TXT, XLS o XLSX</small>
+          </label>
+        </article>
+      </section>
+
+      <section class="actions-row" aria-label="Acciones">
+        <button id="compareButton" type="button" disabled>Comparar</button>
+        <button id="exportDiffButton" type="button" disabled>Exportar diferencias</button>
+        <button id="exportMissingButton" type="button" disabled>Exportar faltantes</button>
+      </section>
+
+      <section class="metrics-grid" aria-label="Metricas">
+        <div class="metric">
+          <span>Analizadas</span>
+          <strong id="totalCount">0</strong>
+        </div>
+        <div class="metric warning">
+          <span>Diferencias</span>
+          <strong id="diffCount">0</strong>
+        </div>
+        <div class="metric danger">
+          <span>Faltan en sistema</span>
+          <strong id="missingSysCount">0</strong>
+        </div>
+        <div class="metric danger">
+          <span>Faltan en MP</span>
+          <strong id="missingMpCount">0</strong>
+        </div>
+      </section>
+
+      <section class="report-shell">
+        <div class="tabs" role="tablist" aria-label="Reportes">
+          <button class="tab active" data-tab="differences" type="button">Diferencias</button>
+          <button class="tab" data-tab="missingSystem" type="button">Faltan en sistema</button>
+          <button class="tab" data-tab="missingMp" type="button">Faltan en MP</button>
+          <button class="tab" data-tab="matches" type="button">Coinciden</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead id="reportHead"></thead>
+            <tbody id="reportBody"></tbody>
+          </table>
+          <p class="empty-state" id="emptyState">Cargá ambos archivos para comparar.</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
