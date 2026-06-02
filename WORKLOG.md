@@ -28,3 +28,4 @@
 | 16:36 | test: node --check app.js OK |
 | 16:37 | chore(web): cambiar titulo a Control de facturacion |
 | 16:42 | deploy(web): agregar workflow de GitHub Pages |
+| 16:45 | deploy(web): habilitar GitHub Pages en gh-pages y verificar HTTP 200 |
