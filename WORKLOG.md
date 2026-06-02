@@ -27,3 +27,4 @@
 | 16:35 | style(web): actualizar UI con tipografia system y estilo Apple-like |
 | 16:36 | test: node --check app.js OK |
 | 16:37 | chore(web): cambiar titulo a Control de facturacion |
+| 16:42 | deploy(web): agregar workflow de GitHub Pages |
