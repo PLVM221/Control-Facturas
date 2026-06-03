@@ -29,3 +29,11 @@
 | 16:37 | chore(web): cambiar titulo a Control de facturacion |
 | 16:42 | deploy(web): agregar workflow de GitHub Pages |
 | 16:45 | deploy(web): habilitar GitHub Pages en gh-pages y verificar HTTP 200 |
+
+### 2026-06-03
+
+| Hora | Cambio |
+|------|--------|
+| 09:45 | refactor(web): dejar reporte solo para diferencias |
+| 09:45 | refactor(web): quitar metricas de faltantes |
+| 09:47 | test: node --check app.js OK |

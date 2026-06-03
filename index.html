@@ -47,10 +47,9 @@
       <section class="actions-row" aria-label="Acciones">
         <button id="compareButton" type="button" disabled>Comparar</button>
         <button id="exportDiffButton" type="button" disabled>Exportar diferencias</button>
-        <button id="exportMissingButton" type="button" disabled>Exportar faltantes</button>
       </section>
 
-      <section class="metrics-grid" aria-label="Metricas">
+      <section class="metrics-grid compact" aria-label="Metricas">
         <div class="metric">
           <span>Analizadas</span>
           <strong id="totalCount">0</strong>
@@ -59,24 +58,9 @@
           <span>Diferencias</span>
           <strong id="diffCount">0</strong>
         </div>
-        <div class="metric danger">
-          <span>Faltan en sistema</span>
-          <strong id="missingSysCount">0</strong>
-        </div>
-        <div class="metric danger">
-          <span>Faltan en MP</span>
-          <strong id="missingMpCount">0</strong>
-        </div>
       </section>
 
       <section class="report-shell">
-        <div class="tabs" role="tablist" aria-label="Reportes">
-          <button class="tab active" data-tab="differences" type="button">Diferencias</button>
-          <button class="tab" data-tab="missingSystem" type="button">Faltan en sistema</button>
-          <button class="tab" data-tab="missingMp" type="button">Faltan en MP</button>
-          <button class="tab" data-tab="matches" type="button">Coinciden</button>
-        </div>
-
         <div class="table-wrap">
           <table>
             <thead id="reportHead"></thead>

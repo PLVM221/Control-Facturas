@@ -1,7 +1,6 @@
 const state = {
   mp: createSourceState(),
   sys: createSourceState(),
-  activeTab: "differences",
   report: createEmptyReport(),
 };
 
@@ -17,32 +16,19 @@ const selectors = {
   sysStatus: document.querySelector("#sysStatus"),
   compareButton: document.querySelector("#compareButton"),
   exportDiffButton: document.querySelector("#exportDiffButton"),
-  exportMissingButton: document.querySelector("#exportMissingButton"),
   resetButton: document.querySelector("#resetButton"),
   totalCount: document.querySelector("#totalCount"),
   diffCount: document.querySelector("#diffCount"),
-  missingSysCount: document.querySelector("#missingSysCount"),
-  missingMpCount: document.querySelector("#missingMpCount"),
   reportHead: document.querySelector("#reportHead"),
   reportBody: document.querySelector("#reportBody"),
   emptyState: document.querySelector("#emptyState"),
-  tabs: document.querySelectorAll(".tab"),
 };
 
 selectors.mpFile.addEventListener("change", (event) => handleFile(event, "mp"));
 selectors.sysFile.addEventListener("change", (event) => handleFile(event, "sys"));
 selectors.compareButton.addEventListener("click", compareFiles);
 selectors.exportDiffButton.addEventListener("click", () => exportRows("diferencias", state.report.differences));
-selectors.exportMissingButton.addEventListener("click", exportMissingRows);
 selectors.resetButton.addEventListener("click", resetApp);
-
-selectors.tabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    state.activeTab = tab.dataset.tab;
-    selectors.tabs.forEach((item) => item.classList.toggle("active", item === tab));
-    renderTable();
-  });
-});
 
 function createSourceState() {
   return {
@@ -255,7 +241,6 @@ function compareFiles() {
   renderTable();
 
   selectors.exportDiffButton.disabled = report.differences.length === 0;
-  selectors.exportMissingButton.disabled = report.missingSystem.length + report.missingMp.length === 0;
 }
 
 function buildRecordMap(rows, saleColumn, amountColumn) {
@@ -347,12 +332,10 @@ function createReportRow(saleNumber, mpRecord, sysRecord, status) {
 function renderMetrics(total) {
   selectors.totalCount.textContent = total;
   selectors.diffCount.textContent = state.report.differences.length;
-  selectors.missingSysCount.textContent = state.report.missingSystem.length;
-  selectors.missingMpCount.textContent = state.report.missingMp.length;
 }
 
 function renderTable() {
-  const rows = state.report[state.activeTab] || [];
+  const rows = state.report.differences || [];
   const columns = [
     ["saleNumber", "Numero venta"],
     ["sysA", "Odoo Fecha"],
@@ -397,10 +380,6 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
-
-function exportMissingRows() {
-  exportRows("faltantes", [...state.report.missingSystem, ...state.report.missingMp]);
 }
 
 function exportRows(name, rows) {
@@ -459,5 +438,4 @@ function resetApp() {
   renderMetrics(0);
   renderTable();
   selectors.exportDiffButton.disabled = true;
-  selectors.exportMissingButton.disabled = true;
 }
