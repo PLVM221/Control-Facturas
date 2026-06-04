@@ -1,11 +1,17 @@
 const SAVED_REPORTS_KEY = "control-facturas-saved-reports";
+const ACTIVE_LOCATION_KEY = "control-facturas-active-location";
+const locations = {
+  "rosario-centro": "Rosario Centro",
+  "alto-rosario": "Alto Rosario",
+};
 
 const state = {
+  location: "",
   mp: createSourceState(),
   sys: createSourceState(),
   report: createEmptyReport(),
   activeReport: "differences",
-  savedReports: loadSavedReports(),
+  savedReports: [],
 };
 
 const reportTypes = {
@@ -36,6 +42,10 @@ const reportColumns = [
 ];
 
 const selectors = {
+  locationGate: document.querySelector("#locationGate"),
+  appShell: document.querySelector("#appShell"),
+  currentLocation: document.querySelector("#currentLocation"),
+  changeLocationButton: document.querySelector("#changeLocationButton"),
   mpFile: document.querySelector("#mpFile"),
   sysFile: document.querySelector("#sysFile"),
   mpStatus: document.querySelector("#mpStatus"),
@@ -61,6 +71,7 @@ const selectors = {
   emptyState: document.querySelector("#emptyState"),
   savedReports: document.querySelector("#savedReports"),
   savedEmptyState: document.querySelector("#savedEmptyState"),
+  savedTitle: document.querySelector("#savedTitle"),
 };
 
 selectors.mpFile.addEventListener("change", (event) => handleFile(event, "mp"));
@@ -71,9 +82,15 @@ selectors.saveReportButton.addEventListener("click", saveActiveReport);
 selectors.resetButton.addEventListener("click", resetApp);
 selectors.reportTabs.addEventListener("click", handleReportTabClick);
 selectors.savedReports.addEventListener("click", handleSavedReportAction);
+selectors.locationGate.addEventListener("click", handleLocationChoice);
+selectors.changeLocationButton.addEventListener("click", showLocationGate);
 
-renderTable();
-renderSavedReports();
+const sessionLocation = sessionStorage.getItem(ACTIVE_LOCATION_KEY);
+if (locations[sessionLocation]) {
+  selectLocation(sessionLocation);
+} else {
+  showLocationGate();
+}
 
 function createSourceState() {
   return {
@@ -504,8 +521,21 @@ function saveActiveReport() {
 }
 
 function loadSavedReports() {
+  if (!state.location) return [];
+
   try {
-    const saved = JSON.parse(localStorage.getItem(SAVED_REPORTS_KEY) || "[]");
+    const stationKey = getSavedReportsKey();
+    const stationSaved = localStorage.getItem(stationKey);
+
+    if (stationSaved === null) {
+      const legacySaved = localStorage.getItem(SAVED_REPORTS_KEY);
+      if (legacySaved) {
+        localStorage.setItem(stationKey, legacySaved);
+        localStorage.removeItem(SAVED_REPORTS_KEY);
+      }
+    }
+
+    const saved = JSON.parse(localStorage.getItem(stationKey) || "[]");
     return Array.isArray(saved) ? saved : [];
   } catch {
     return [];
@@ -513,7 +543,11 @@ function loadSavedReports() {
 }
 
 function persistSavedReports() {
-  localStorage.setItem(SAVED_REPORTS_KEY, JSON.stringify(state.savedReports));
+  localStorage.setItem(getSavedReportsKey(), JSON.stringify(state.savedReports));
+}
+
+function getSavedReportsKey() {
+  return `${SAVED_REPORTS_KEY}-${state.location}`;
 }
 
 function renderSavedReports() {
@@ -575,4 +609,29 @@ function resetApp() {
   updateCompareState();
   renderMetrics(0);
   renderTable();
+}
+
+function handleLocationChoice(event) {
+  const button = event.target.closest("[data-location]");
+  if (!button) return;
+  selectLocation(button.dataset.location);
+}
+
+function selectLocation(location) {
+  if (!locations[location]) return;
+
+  state.location = location;
+  sessionStorage.setItem(ACTIVE_LOCATION_KEY, location);
+  resetApp();
+  state.savedReports = loadSavedReports();
+  selectors.currentLocation.textContent = locations[location];
+  selectors.savedTitle.textContent = `Reportes guardados · ${locations[location]}`;
+  renderSavedReports();
+  selectors.locationGate.hidden = true;
+  selectors.appShell.hidden = false;
+}
+
+function showLocationGate() {
+  selectors.locationGate.hidden = false;
+  selectors.appShell.hidden = true;
 }

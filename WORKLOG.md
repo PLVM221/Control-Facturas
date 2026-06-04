@@ -51,3 +51,4 @@
 | 10:40 | fix(web): tomar Total Pago desde la columna F de Odoo |
 | 11:00 | fix(web): conservar posiciones físicas de columnas al leer archivos |
 | 11:20 | style(web): centrar selector, encabezados y contenido de reportes |
+| 11:45 | feat(web): separar acceso e historial por Rosario Centro y Alto Rosario |

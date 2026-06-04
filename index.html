@@ -4,18 +4,36 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260604-4" />
+    <link rel="stylesheet" href="styles.css?v=20260604-5" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script defer src="app.js?v=20260604-5"></script>
+    <script defer src="app.js?v=20260604-6"></script>
   </head>
   <body>
-    <main class="app-shell">
+    <section class="location-gate" id="locationGate" aria-labelledby="locationTitle">
+      <div class="location-card">
+        <p class="eyebrow">Control de facturación</p>
+        <h1 id="locationTitle">Seleccioná tu puesto</h1>
+        <p>Los reportes guardados se mantendrán separados para cada ubicación.</p>
+        <div class="location-options">
+          <button type="button" data-location="rosario-centro">Rosario Centro</button>
+          <button type="button" data-location="alto-rosario">Alto Rosario</button>
+        </div>
+      </div>
+    </section>
+
+    <main class="app-shell" id="appShell" hidden>
       <section class="topbar" aria-label="Resumen">
         <div>
           <p class="eyebrow">Mercado Pago vs Odoo</p>
           <h1>Control de facturación</h1>
         </div>
-        <button class="ghost-button" id="resetButton" type="button">Limpiar</button>
+        <div class="topbar-actions">
+          <button class="location-button ghost-button" id="changeLocationButton" type="button">
+            <span id="currentLocation">Puesto</span>
+            <small>Cambiar puesto</small>
+          </button>
+          <button class="ghost-button" id="resetButton" type="button">Limpiar</button>
+        </div>
       </section>
 
       <section class="upload-grid" aria-label="Carga de archivos">

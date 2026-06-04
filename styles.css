@@ -89,6 +89,45 @@ button:disabled {
   padding: 34px 0 48px;
 }
 
+.location-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(0, 113, 227, 0.18), transparent 34rem),
+    rgba(245, 245, 247, 0.96);
+  backdrop-filter: blur(18px);
+}
+
+.location-gate[hidden],
+.app-shell[hidden] {
+  display: none;
+}
+
+.location-card {
+  width: min(560px, 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  padding: 34px;
+  background: var(--surface-solid);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.location-card p:not(.eyebrow) {
+  margin: 14px 0 24px;
+  color: var(--muted);
+}
+
+.location-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .topbar,
 .actions-row {
   display: flex;
@@ -99,6 +138,29 @@ button:disabled {
 
 .topbar {
   margin-bottom: 22px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-button {
+  display: grid;
+  height: auto;
+  min-height: 52px;
+  padding: 7px 16px;
+  text-align: left;
+}
+
+.location-button span {
+  font-weight: 700;
+}
+
+.location-button small {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .eyebrow {
@@ -475,6 +537,7 @@ td.amount {
 
   .topbar {
     align-items: flex-start;
+    flex-direction: column;
   }
 
   h1 {
@@ -492,6 +555,16 @@ td.amount {
 
   .actions-row button {
     width: 100%;
+  }
+
+  .topbar-actions,
+  .topbar-actions button,
+  .location-options {
+    width: 100%;
+  }
+
+  .location-options {
+    grid-template-columns: 1fr;
   }
 
   .report-toolbar,
