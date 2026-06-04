@@ -2,7 +2,7 @@ const SAVED_REPORTS_KEY = "control-facturas-saved-reports";
 const ACTIVE_LOCATION_KEY = "control-facturas-active-location";
 const locations = {
   "rosario-centro": "Rosario Centro",
-  "alto-rosario": "Alto Rosario",
+  "alto-rosario": "Solar",
 };
 const supabaseConfig = window.SUPABASE_CONFIG || {};
 
