@@ -1,4 +1,5 @@
 const SAVED_REPORTS_KEY = "control-facturas-saved-reports";
+const PENDING_DELETIONS_KEY = "control-facturas-pending-deletions";
 const ACTIVE_LOCATION_KEY = "control-facturas-active-location";
 const locations = {
   "rosario-centro": "Rosario Centro",
@@ -564,6 +565,7 @@ async function loadSavedReports() {
   if (isCloudConfigured()) {
     try {
       setSyncStatus("Sincronizando...", false);
+      await syncPendingDeletions();
       const localReports = loadLocalSavedReports();
       if (localReports.length) {
         await supabaseRequest("saved_reports?on_conflict=id", {
@@ -635,6 +637,43 @@ function getSavedReportsKey() {
   return `${SAVED_REPORTS_KEY}-${state.location}`;
 }
 
+function getPendingDeletionsKey() {
+  return `${PENDING_DELETIONS_KEY}-${state.location}`;
+}
+
+function getPendingDeletions() {
+  try {
+    const pending = JSON.parse(localStorage.getItem(getPendingDeletionsKey()) || "[]");
+    return Array.isArray(pending) ? pending : [];
+  } catch {
+    return [];
+  }
+}
+
+function addPendingDeletion(reportId) {
+  const pending = new Set(getPendingDeletions());
+  pending.add(reportId);
+  localStorage.setItem(getPendingDeletionsKey(), JSON.stringify([...pending]));
+}
+
+function removePendingDeletion(reportId) {
+  const pending = getPendingDeletions().filter((id) => id !== reportId);
+  localStorage.setItem(getPendingDeletionsKey(), JSON.stringify(pending));
+}
+
+async function syncPendingDeletions() {
+  for (const reportId of getPendingDeletions()) {
+    await deleteRemoteReport(reportId);
+    removePendingDeletion(reportId);
+  }
+}
+
+function deleteRemoteReport(reportId) {
+  return supabaseRequest(`saved_reports?id=eq.${encodeURIComponent(reportId)}`, {
+    method: "DELETE",
+  });
+}
+
 function renderSavedReports() {
   selectors.savedReports.innerHTML = state.savedReports
     .map(
@@ -676,24 +715,22 @@ async function handleSavedReportAction(event) {
   }
 
   if (button.dataset.action === "delete" && confirm(`¿Borrar el reporte "${report.label}"?`)) {
-    if (isCloudConfigured()) {
-      try {
-        setSyncStatus("Sincronizando...", false);
-        await supabaseRequest(`saved_reports?id=eq.${encodeURIComponent(report.id)}`, {
-          method: "DELETE",
-        });
-        setSyncStatus("Sincronizado", true);
-      } catch (error) {
-        console.error(error);
-        setSyncStatus("No se pudo borrar en la nube", false);
-        alert("No se pudo borrar el reporte en Supabase. Revisá la conexión.");
-        return;
-      }
-    }
-
     state.savedReports = state.savedReports.filter((item) => item.id !== report.id);
     localStorage.setItem(getSavedReportsKey(), JSON.stringify(state.savedReports));
     renderSavedReports();
+
+    if (isCloudConfigured()) {
+      addPendingDeletion(report.id);
+      try {
+        setSyncStatus("Sincronizando...", false);
+        await deleteRemoteReport(report.id);
+        removePendingDeletion(report.id);
+        setSyncStatus("Sincronizado", true);
+      } catch (error) {
+        console.error(error);
+        setSyncStatus("Borrado local · sincronización pendiente", false);
+      }
+    }
   }
 }
 
