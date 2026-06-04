@@ -1,4 +1,4 @@
 window.SUPABASE_CONFIG = {
-  url: "",
+  url: "https://pnwmpcvicfmtbqllyscf.supabase.co",
   publishableKey: "",
 };

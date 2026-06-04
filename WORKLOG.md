@@ -53,3 +53,4 @@
 | 11:20 | style(web): centrar selector, encabezados y contenido de reportes |
 | 11:45 | feat(web): separar acceso e historial por Rosario Centro y Alto Rosario |
 | 12:10 | feat(web): preparar sincronización de reportes entre equipos con Supabase |
+| 12:25 | config(web): agregar Project URL de Supabase |
