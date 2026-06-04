@@ -58,3 +58,4 @@
 | 12:50 | chore(web): renombrar reporte a Diferencias en Montos |
 | 13:00 | chore(web): renombrar Alto Rosario a Solar |
 | 13:20 | feat(web): aclarar conciliación de filas, coincidencias, vacíos y duplicados |
+| 13:35 | chore(web): quitar resumen de conciliación de Mercado Pago |

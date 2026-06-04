@@ -459,17 +459,10 @@ function renderMetrics(details) {
   }
 
   const odooDuplicates = details.sysIndex.duplicateRows;
-  const mpUnique = details.mpIndex.records.size;
-  const mpEmpty = details.mpIndex.emptyRows;
-  const mpDuplicates = details.mpIndex.duplicateRows;
   selectors.reconciliationSummary.innerHTML = `
     <div>
       <strong>Cómo cierra Odoo</strong>
       <span>${state.sys.rows.length} filas = ${matches} coincidencias + ${state.report.missingMp.length} sin Mercado Pago + ${state.report.emptyMemo.length} sin Memo${odooDuplicates ? ` + ${odooDuplicates} duplicadas` : ""}</span>
-    </div>
-    <div>
-      <strong>Cómo cierra Mercado Pago</strong>
-      <span>${state.mp.rows.length} filas = ${mpUnique} números únicos válidos + ${mpDuplicates} duplicadas + ${mpEmpty} sin número en K</span>
     </div>
   `;
   selectors.reconciliationSummary.hidden = false;
