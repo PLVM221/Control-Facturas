@@ -5,10 +5,15 @@ const locations = {
   "rosario-centro": "Rosario Centro",
   "alto-rosario": "Solar",
 };
+const locationPasswordHashes = {
+  "rosario-centro": "dcc42bf11c51b8ba886040b0eadb31fda6aa6439fe1f219bd085df043ed9b4dc",
+  "alto-rosario": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+};
 const supabaseConfig = window.SUPABASE_CONFIG || {};
 
 const state = {
   location: "",
+  pendingLocation: "",
   mp: createSourceState(),
   sys: createSourceState(),
   report: createEmptyReport(),
@@ -48,6 +53,12 @@ const selectors = {
   appShell: document.querySelector("#appShell"),
   currentLocation: document.querySelector("#currentLocation"),
   changeLocationButton: document.querySelector("#changeLocationButton"),
+  locationOptions: document.querySelector(".location-options"),
+  locationLogin: document.querySelector("#locationLogin"),
+  locationLoginTitle: document.querySelector("#locationLoginTitle"),
+  locationPassword: document.querySelector("#locationPassword"),
+  locationLoginError: document.querySelector("#locationLoginError"),
+  cancelLocationLogin: document.querySelector("#cancelLocationLogin"),
   mpFile: document.querySelector("#mpFile"),
   sysFile: document.querySelector("#sysFile"),
   mpStatus: document.querySelector("#mpStatus"),
@@ -88,6 +99,8 @@ selectors.reportTabs.addEventListener("click", handleReportTabClick);
 selectors.savedReports.addEventListener("click", handleSavedReportAction);
 selectors.locationGate.addEventListener("click", handleLocationChoice);
 selectors.changeLocationButton.addEventListener("click", showLocationGate);
+selectors.locationLogin.addEventListener("submit", handleLocationLogin);
+selectors.cancelLocationLogin.addEventListener("click", resetLocationLogin);
 
 const sessionLocation = sessionStorage.getItem(ACTIVE_LOCATION_KEY);
 if (locations[sessionLocation]) {
@@ -751,7 +764,35 @@ function resetApp() {
 function handleLocationChoice(event) {
   const button = event.target.closest("[data-location]");
   if (!button) return;
-  selectLocation(button.dataset.location);
+  state.pendingLocation = button.dataset.location;
+  selectors.locationLoginTitle.textContent = `Ingresar a ${locations[state.pendingLocation]}`;
+  selectors.locationOptions.hidden = true;
+  selectors.locationLogin.hidden = false;
+  selectors.locationLoginError.hidden = true;
+  selectors.locationPassword.value = "";
+  selectors.locationPassword.focus();
+}
+
+async function handleLocationLogin(event) {
+  event.preventDefault();
+  const passwordHash = await sha256(selectors.locationPassword.value);
+
+  if (passwordHash !== locationPasswordHashes[state.pendingLocation]) {
+    selectors.locationLoginError.hidden = false;
+    selectors.locationPassword.select();
+    return;
+  }
+
+  await selectLocation(state.pendingLocation);
+  resetLocationLogin();
+}
+
+function resetLocationLogin() {
+  state.pendingLocation = "";
+  selectors.locationOptions.hidden = false;
+  selectors.locationLogin.hidden = true;
+  selectors.locationLoginError.hidden = true;
+  selectors.locationPassword.value = "";
 }
 
 async function selectLocation(location) {
@@ -769,8 +810,16 @@ async function selectLocation(location) {
 }
 
 function showLocationGate() {
+  sessionStorage.removeItem(ACTIVE_LOCATION_KEY);
+  resetLocationLogin();
   selectors.locationGate.hidden = false;
   selectors.appShell.hidden = true;
+}
+
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hashBuffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function isCloudConfigured() {

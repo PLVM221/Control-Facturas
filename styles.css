@@ -128,6 +128,42 @@ button:disabled {
   gap: 12px;
 }
 
+.location-login {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.location-login[hidden],
+.location-options[hidden],
+.login-error[hidden] {
+  display: none;
+}
+
+.location-login input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 12px;
+  color: var(--text);
+  background: #ffffff;
+}
+
+.login-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.login-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .topbar,
 .actions-row {
   display: flex;
@@ -596,6 +632,10 @@ td.amount {
   }
 
   .location-options {
+    grid-template-columns: 1fr;
+  }
+
+  .login-actions {
     grid-template-columns: 1fr;
   }
 
