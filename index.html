@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260604-1" />
+    <link rel="stylesheet" href="styles.css?v=20260604-2" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script defer src="app.js?v=20260604-1"></script>
+    <script defer src="app.js?v=20260604-2"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -63,6 +63,10 @@
           <span>Odoo sin Mercado Pago</span>
           <strong id="missingMpCount">0</strong>
         </div>
+        <div class="metric danger">
+          <span>Ventas sin Memo</span>
+          <strong id="emptyMemoCount">0</strong>
+        </div>
       </section>
 
       <section class="report-shell">
@@ -71,6 +75,7 @@
           <div class="report-tabs" id="reportTabs" aria-label="Tipo de reporte">
             <button class="tab-button active" type="button" data-report-type="differences">Diferencias</button>
             <button class="tab-button" type="button" data-report-type="missingMp">Odoo sin Mercado Pago</button>
+            <button class="tab-button" type="button" data-report-type="emptyMemo">Ventas sin Memo</button>
           </div>
         </div>
         <div class="table-wrap">

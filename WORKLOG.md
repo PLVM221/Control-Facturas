@@ -46,3 +46,4 @@
 | 09:30 | feat(web): agregar reporte de operaciones Odoo sin Mercado Pago |
 | 09:30 | feat(web): guardar, borrar y exportar reportes guardados en Excel |
 | 09:31 | test: node --check, git diff --check y prueba funcional simulada OK |
+| 10:05 | feat(web): agregar reporte de ventas Odoo con Memo vacío |

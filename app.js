@@ -19,6 +19,11 @@ const reportTypes = {
     empty: "Todas las operaciones de Odoo aparecen en Mercado Pago.",
     fileName: "odoo-sin-mercado-pago",
   },
+  emptyMemo: {
+    label: "Ventas sin Memo",
+    empty: "No hay ventas de Odoo con la columna Memo vacía.",
+    fileName: "ventas-sin-memo",
+  },
 };
 
 const reportColumns = [
@@ -42,6 +47,7 @@ const selectors = {
   totalCount: document.querySelector("#totalCount"),
   diffCount: document.querySelector("#diffCount"),
   missingMpCount: document.querySelector("#missingMpCount"),
+  emptyMemoCount: document.querySelector("#emptyMemoCount"),
   activeReportTitle: document.querySelector("#activeReportTitle"),
   reportTabs: document.querySelector("#reportTabs"),
   reportHead: document.querySelector("#reportHead"),
@@ -75,6 +81,7 @@ function createEmptyReport() {
   return {
     differences: [],
     missingMp: [],
+    emptyMemo: [],
     matches: [],
     missingSystem: [],
   };
@@ -248,6 +255,12 @@ function compareFiles() {
   const report = createEmptyReport();
   const allSaleNumbers = new Set([...mpRecords.keys(), ...sysRecords.keys()]);
 
+  state.sys.rows.forEach((row) => {
+    if (String(getValueByColumnLetter(row, "sys", "G") ?? "").trim() === "") {
+      report.emptyMemo.push(createReportRow(null, createSystemRecord(row)));
+    }
+  });
+
   allSaleNumbers.forEach((saleNumber) => {
     const mpRecord = mpRecords.get(saleNumber);
     const sysRecord = sysRecords.get(saleNumber);
@@ -287,13 +300,7 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
       amount: parseMoney(row[amountColumn]),
       sourceValues:
         sourceKey === "sys"
-          ? {
-              date: getValueByColumnLetter(row, "sys", "A"),
-              number: getValueByColumnLetter(row, "sys", "B"),
-              journal: getValueByColumnLetter(row, "sys", "C"),
-              totalPayment: parseMoney(getValueByColumnLetter(row, "sys", "E")),
-              memo: getValueByColumnLetter(row, "sys", "G"),
-            }
+          ? createSystemRecord(row).sourceValues
           : {
               mpOperationValue: parseMoney(getValueByColumnLetter(row, "mp", "Q")),
             },
@@ -301,6 +308,19 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
   });
 
   return records;
+}
+
+function createSystemRecord(row) {
+  return {
+    amount: parseMoney(getValueByColumnLetter(row, "sys", "E")),
+    sourceValues: {
+      date: getValueByColumnLetter(row, "sys", "A"),
+      number: getValueByColumnLetter(row, "sys", "B"),
+      journal: getValueByColumnLetter(row, "sys", "C"),
+      totalPayment: parseMoney(getValueByColumnLetter(row, "sys", "E")),
+      memo: getValueByColumnLetter(row, "sys", "G"),
+    },
+  };
 }
 
 function normalizeSaleNumber(value) {
@@ -348,6 +368,7 @@ function renderMetrics(total) {
   selectors.totalCount.textContent = total;
   selectors.diffCount.textContent = state.report.differences.length;
   selectors.missingMpCount.textContent = state.report.missingMp.length;
+  selectors.emptyMemoCount.textContent = state.report.emptyMemo.length;
 }
 
 function getActiveRows() {
