@@ -209,7 +209,7 @@ function getPreferredColumns(sourceKey, headers) {
   const positions =
     sourceKey === "mp"
       ? { sale: "K", amount: "Q" }
-      : { sale: "G", amount: "E" };
+      : { sale: "G", amount: "F" };
 
   return {
     sale: getHeaderByColumnLetter(headers, positions.sale),
@@ -326,12 +326,12 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
 
 function createSystemRecord(row) {
   return {
-    amount: parseMoney(getValueByColumnLetter(row, "sys", "E")),
+    amount: parseMoney(getValueByColumnLetter(row, "sys", "F")),
     sourceValues: {
       date: getValueByColumnLetter(row, "sys", "A"),
       number: getValueByColumnLetter(row, "sys", "B"),
       journal: getValueByColumnLetter(row, "sys", "C"),
-      totalPayment: parseMoney(getValueByColumnLetter(row, "sys", "E")),
+      totalPayment: parseMoney(getValueByColumnLetter(row, "sys", "F")),
       memo: getValueByColumnLetter(row, "sys", "G"),
     },
   };

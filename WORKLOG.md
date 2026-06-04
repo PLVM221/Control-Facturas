@@ -48,3 +48,4 @@
 | 09:31 | test: node --check, git diff --check y prueba funcional simulada OK |
 | 10:05 | feat(web): agregar reporte de ventas Odoo con Memo vacío |
 | 10:25 | style(web): compactar paneles después de cargar los archivos |
+| 10:40 | fix(web): tomar Total Pago desde la columna F de Odoo |
