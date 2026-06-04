@@ -128,7 +128,7 @@ async function parseFile(file) {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
     return normalizeParsedRows(rows);
   }
 
@@ -179,14 +179,7 @@ function parseDelimitedText(text) {
   row.push(cell);
   rows.push(row);
 
-  const [headers = [], ...dataRows] = rows.filter((item) => item.some((value) => value.trim() !== ""));
-  return dataRows.map((dataRow) => {
-    const record = {};
-    headers.forEach((header, index) => {
-      record[String(header).trim()] = dataRow[index] ?? "";
-    });
-    return record;
-  });
+  return rows;
 }
 
 function detectDelimiter(text) {
@@ -198,11 +191,46 @@ function detectDelimiter(text) {
 }
 
 function normalizeParsedRows(rows) {
-  const headers = [...new Set(rows.flatMap((row) => Object.keys(row)))].filter(Boolean);
+  if (!rows.length || !Array.isArray(rows[0])) {
+    const headers = [...new Set(rows.flatMap((row) => Object.keys(row)))].filter(Boolean);
+    return {
+      headers,
+      rows: rows.filter((row) => Object.values(row).some(hasValue)),
+    };
+  }
+
+  const nonEmptyRows = rows.filter((row) => row.some(hasValue));
+  const [, ...dataRows] = nonEmptyRows;
+  const columnCount = Math.max(0, ...nonEmptyRows.map((row) => row.length));
+  const headers = Array.from({ length: columnCount }, (_, index) => getPhysicalColumnKey(index));
+
   return {
     headers,
-    rows: rows.filter((row) => Object.values(row).some((value) => String(value).trim() !== "")),
+    rows: dataRows.map((row) =>
+      Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""]))
+    ),
   };
+}
+
+function hasValue(value) {
+  return String(value ?? "").trim() !== "";
+}
+
+function getPhysicalColumnKey(index) {
+  return `__column_${indexToColumnLetter(index)}`;
+}
+
+function indexToColumnLetter(index) {
+  let result = "";
+  let current = index + 1;
+
+  while (current > 0) {
+    const remainder = (current - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    current = Math.floor((current - 1) / 26);
+  }
+
+  return result;
 }
 
 function getPreferredColumns(sourceKey, headers) {
