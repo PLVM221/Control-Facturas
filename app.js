@@ -33,7 +33,7 @@ const reportTypes = {
     fileName: "odoo-sin-mercado-pago",
   },
   emptyMemo: {
-    label: "Ventas sin Memo",
+    label: "Ventas sin MP",
     empty: "No hay ventas de Odoo con la columna Memo vacía.",
     fileName: "ventas-sin-memo",
   },
@@ -476,7 +476,7 @@ function renderMetrics(details) {
   selectors.reconciliationSummary.innerHTML = `
     <div>
       <strong>Cómo cierra Odoo</strong>
-      <span>${state.sys.rows.length} filas = ${matches} coincidencias + ${state.report.missingMp.length} sin Mercado Pago + ${state.report.emptyMemo.length} sin Memo${odooDuplicates ? ` + ${odooDuplicates} duplicadas` : ""}</span>
+      <span>${state.sys.rows.length} filas = ${matches} coincidencias + ${state.report.missingMp.length} sin Mercado Pago + ${state.report.emptyMemo.length} sin MP${odooDuplicates ? ` + ${odooDuplicates} duplicadas` : ""}</span>
     </div>
   `;
   selectors.reconciliationSummary.hidden = false;
