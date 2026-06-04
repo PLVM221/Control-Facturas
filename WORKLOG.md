@@ -54,3 +54,4 @@
 | 11:45 | feat(web): separar acceso e historial por Rosario Centro y Alto Rosario |
 | 12:10 | feat(web): preparar sincronización de reportes entre equipos con Supabase |
 | 12:25 | config(web): agregar Project URL de Supabase |
+| 12:35 | config(web): agregar Publishable key de Supabase |
