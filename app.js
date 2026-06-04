@@ -65,6 +65,7 @@ const selectors = {
   diffCount: document.querySelector("#diffCount"),
   missingMpCount: document.querySelector("#missingMpCount"),
   emptyMemoCount: document.querySelector("#emptyMemoCount"),
+  reconciliationSummary: document.querySelector("#reconciliationSummary"),
   activeReportTitle: document.querySelector("#activeReportTitle"),
   reportTabs: document.querySelector("#reportTabs"),
   reportHead: document.querySelector("#reportHead"),
@@ -311,8 +312,10 @@ function updateCompareState() {
 function compareFiles() {
   const mpColumns = getPreferredColumns("mp", state.mp.headers);
   const sysColumns = getPreferredColumns("sys", state.sys.headers);
-  const mpRecords = buildRecordMap(state.mp.rows, mpColumns.sale, mpColumns.amount, "mp");
-  const sysRecords = buildRecordMap(state.sys.rows, sysColumns.sale, sysColumns.amount, "sys");
+  const mpIndex = buildRecordMap(state.mp.rows, mpColumns.sale, mpColumns.amount, "mp");
+  const sysIndex = buildRecordMap(state.sys.rows, sysColumns.sale, sysColumns.amount, "sys");
+  const mpRecords = mpIndex.records;
+  const sysRecords = sysIndex.records;
   const report = createEmptyReport();
   const allSaleNumbers = new Set([...mpRecords.keys(), ...sysRecords.keys()]);
 
@@ -346,16 +349,30 @@ function compareFiles() {
 
   state.report = report;
   state.activeReport = "differences";
-  renderMetrics(allSaleNumbers.size);
+  renderMetrics({
+    matches: report.matches.length + report.differences.length,
+    mpIndex,
+    sysIndex,
+  });
   renderTable();
 }
 
 function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
   const records = new Map();
+  let emptyRows = 0;
+  let duplicateRows = 0;
 
   rows.forEach((row) => {
     const saleNumber = normalizeSaleNumber(row[saleColumn]);
-    if (!saleNumber || records.has(saleNumber)) return;
+    if (!saleNumber) {
+      emptyRows += 1;
+      return;
+    }
+
+    if (records.has(saleNumber)) {
+      duplicateRows += 1;
+      return;
+    }
 
     records.set(saleNumber, {
       amount: parseMoney(row[amountColumn]),
@@ -368,7 +385,11 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
     });
   });
 
-  return records;
+  return {
+    records,
+    emptyRows,
+    duplicateRows,
+  };
 }
 
 function createSystemRecord(row) {
@@ -425,11 +446,33 @@ function createReportRow(mpRecord, sysRecord) {
   };
 }
 
-function renderMetrics(total) {
-  selectors.totalCount.textContent = total;
+function renderMetrics(details) {
+  const matches = typeof details === "number" ? details : details.matches;
+  selectors.totalCount.textContent = matches;
   selectors.diffCount.textContent = state.report.differences.length;
   selectors.missingMpCount.textContent = state.report.missingMp.length;
   selectors.emptyMemoCount.textContent = state.report.emptyMemo.length;
+
+  if (typeof details === "number") {
+    selectors.reconciliationSummary.hidden = true;
+    return;
+  }
+
+  const odooDuplicates = details.sysIndex.duplicateRows;
+  const mpUnique = details.mpIndex.records.size;
+  const mpEmpty = details.mpIndex.emptyRows;
+  const mpDuplicates = details.mpIndex.duplicateRows;
+  selectors.reconciliationSummary.innerHTML = `
+    <div>
+      <strong>Cómo cierra Odoo</strong>
+      <span>${state.sys.rows.length} filas = ${matches} coincidencias + ${state.report.missingMp.length} sin Mercado Pago + ${state.report.emptyMemo.length} sin Memo${odooDuplicates ? ` + ${odooDuplicates} duplicadas` : ""}</span>
+    </div>
+    <div>
+      <strong>Cómo cierra Mercado Pago</strong>
+      <span>${state.mp.rows.length} filas = ${mpUnique} números únicos válidos + ${mpDuplicates} duplicadas + ${mpEmpty} sin número en K</span>
+    </div>
+  `;
+  selectors.reconciliationSummary.hidden = false;
 }
 
 function getActiveRows() {
