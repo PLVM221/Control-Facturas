@@ -321,13 +321,16 @@ input[type="number"] {
 }
 
 .report-toolbar {
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border-soft);
+  text-align: center;
 }
 
 .report-tabs {
+  justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -366,7 +369,7 @@ th,
 td {
   padding: 13px 14px;
   border-bottom: 1px solid var(--border-soft);
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -390,7 +393,7 @@ tbody tr:hover {
 }
 
 td.amount {
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
