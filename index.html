@@ -4,9 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260604-5" />
+    <link rel="stylesheet" href="styles.css?v=20260604-6" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script defer src="app.js?v=20260604-6"></script>
+    <script defer src="supabase-config.js?v=20260604-1"></script>
+    <script defer src="app.js?v=20260604-7"></script>
   </head>
   <body>
     <section class="location-gate" id="locationGate" aria-labelledby="locationTitle">
@@ -108,9 +109,10 @@
       <section class="saved-section" aria-labelledby="savedTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Historial local</p>
+            <p class="eyebrow">Historial por puesto</p>
             <h2 id="savedTitle">Reportes guardados</h2>
           </div>
+          <span class="status-pill" id="syncStatus">Guardado local</span>
         </div>
         <div class="saved-reports" id="savedReports"></div>
         <p class="saved-empty" id="savedEmptyState">Todavía no hay reportes guardados.</p>

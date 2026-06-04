@@ -4,6 +4,7 @@ const locations = {
   "rosario-centro": "Rosario Centro",
   "alto-rosario": "Alto Rosario",
 };
+const supabaseConfig = window.SUPABASE_CONFIG || {};
 
 const state = {
   location: "",
@@ -72,6 +73,7 @@ const selectors = {
   savedReports: document.querySelector("#savedReports"),
   savedEmptyState: document.querySelector("#savedEmptyState"),
   savedTitle: document.querySelector("#savedTitle"),
+  syncStatus: document.querySelector("#syncStatus"),
 };
 
 selectors.mpFile.addEventListener("change", (event) => handleFile(event, "mp"));
@@ -500,7 +502,7 @@ function exportRows(name, rows) {
   XLSX.writeFile(workbook, `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-function saveActiveReport() {
+async function saveActiveReport() {
   const rows = getActiveRows();
   if (!rows.length) return;
 
@@ -516,13 +518,44 @@ function saveActiveReport() {
     rows: rows.map((row) => ({ ...row })),
   });
 
-  persistSavedReports();
+  await persistSavedReports();
   renderSavedReports();
 }
 
-function loadSavedReports() {
+async function loadSavedReports() {
   if (!state.location) return [];
 
+  if (isCloudConfigured()) {
+    try {
+      setSyncStatus("Sincronizando...", false);
+      const localReports = loadLocalSavedReports();
+      if (localReports.length) {
+        await supabaseRequest("saved_reports?on_conflict=id", {
+          method: "POST",
+          headers: { Prefer: "resolution=ignore-duplicates" },
+          body: JSON.stringify(localReports.map(toRemoteReport)),
+        });
+      }
+
+      const remoteReports = await supabaseRequest(
+        `saved_reports?location=eq.${encodeURIComponent(state.location)}&select=*&order=created_at.desc`
+      );
+      setSyncStatus("Sincronizado", true);
+      const savedReports = remoteReports.map(fromRemoteReport);
+      localStorage.setItem(getSavedReportsKey(), JSON.stringify(savedReports));
+      return savedReports;
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Sin conexión · guardado local", false);
+    }
+  } else {
+    setSyncStatus("Guardado local", false);
+  }
+
+  return loadLocalSavedReports();
+}
+
+function loadLocalSavedReports() {
   try {
     const stationKey = getSavedReportsKey();
     const stationSaved = localStorage.getItem(stationKey);
@@ -542,7 +575,23 @@ function loadSavedReports() {
   }
 }
 
-function persistSavedReports() {
+async function persistSavedReports() {
+  if (isCloudConfigured()) {
+    try {
+      setSyncStatus("Sincronizando...", false);
+      const latestReport = state.savedReports[0];
+      await supabaseRequest("saved_reports?on_conflict=id", {
+        method: "POST",
+        headers: { Prefer: "resolution=ignore-duplicates" },
+        body: JSON.stringify(toRemoteReport(latestReport)),
+      });
+      setSyncStatus("Sincronizado", true);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Sin conexión · guardado local", false);
+    }
+  }
+
   localStorage.setItem(getSavedReportsKey(), JSON.stringify(state.savedReports));
 }
 
@@ -578,7 +627,7 @@ function formatSavedDate(value) {
   }).format(new Date(value));
 }
 
-function handleSavedReportAction(event) {
+async function handleSavedReportAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
 
@@ -591,8 +640,23 @@ function handleSavedReportAction(event) {
   }
 
   if (button.dataset.action === "delete" && confirm(`¿Borrar el reporte "${report.label}"?`)) {
+    if (isCloudConfigured()) {
+      try {
+        setSyncStatus("Sincronizando...", false);
+        await supabaseRequest(`saved_reports?id=eq.${encodeURIComponent(report.id)}`, {
+          method: "DELETE",
+        });
+        setSyncStatus("Sincronizado", true);
+      } catch (error) {
+        console.error(error);
+        setSyncStatus("No se pudo borrar en la nube", false);
+        alert("No se pudo borrar el reporte en Supabase. Revisá la conexión.");
+        return;
+      }
+    }
+
     state.savedReports = state.savedReports.filter((item) => item.id !== report.id);
-    persistSavedReports();
+    localStorage.setItem(getSavedReportsKey(), JSON.stringify(state.savedReports));
     renderSavedReports();
   }
 }
@@ -617,13 +681,13 @@ function handleLocationChoice(event) {
   selectLocation(button.dataset.location);
 }
 
-function selectLocation(location) {
+async function selectLocation(location) {
   if (!locations[location]) return;
 
   state.location = location;
   sessionStorage.setItem(ACTIVE_LOCATION_KEY, location);
   resetApp();
-  state.savedReports = loadSavedReports();
+  state.savedReports = await loadSavedReports();
   selectors.currentLocation.textContent = locations[location];
   selectors.savedTitle.textContent = `Reportes guardados · ${locations[location]}`;
   renderSavedReports();
@@ -634,4 +698,56 @@ function selectLocation(location) {
 function showLocationGate() {
   selectors.locationGate.hidden = false;
   selectors.appShell.hidden = true;
+}
+
+function isCloudConfigured() {
+  return Boolean(supabaseConfig.url && supabaseConfig.publishableKey);
+}
+
+function setSyncStatus(text, ready) {
+  selectors.syncStatus.textContent = text;
+  selectors.syncStatus.classList.toggle("ready", ready);
+}
+
+async function supabaseRequest(path, options = {}) {
+  const response = await fetch(`${supabaseConfig.url.replace(/\/$/, "")}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: supabaseConfig.publishableKey,
+      Authorization: `Bearer ${supabaseConfig.publishableKey}`,
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase respondió ${response.status}: ${await response.text()}`);
+  }
+
+  if (response.status === 204 || options.method === "DELETE") return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function toRemoteReport(report) {
+  return {
+    id: report.id,
+    location: state.location,
+    type: report.type,
+    label: report.label,
+    created_at: report.createdAt,
+    source_files: report.sourceFiles,
+    rows: report.rows,
+  };
+}
+
+function fromRemoteReport(report) {
+  return {
+    id: report.id,
+    type: report.type,
+    label: report.label,
+    createdAt: report.created_at,
+    sourceFiles: report.source_files,
+    rows: report.rows,
+  };
 }
