@@ -1,13 +1,34 @@
+const SAVED_REPORTS_KEY = "control-facturas-saved-reports";
+
 const state = {
   mp: createSourceState(),
   sys: createSourceState(),
   report: createEmptyReport(),
+  activeReport: "differences",
+  savedReports: loadSavedReports(),
 };
 
-const reportColumnLetters = {
-  sys: ["A", "B", "C", "D", "F"],
-  mp: ["Q", "D"],
+const reportTypes = {
+  differences: {
+    label: "Diferencias",
+    empty: "No hay operaciones con importes diferentes.",
+    fileName: "diferencias",
+  },
+  missingMp: {
+    label: "Odoo sin Mercado Pago",
+    empty: "Todas las operaciones de Odoo aparecen en Mercado Pago.",
+    fileName: "odoo-sin-mercado-pago",
+  },
 };
+
+const reportColumns = [
+  ["date", "Fecha", false],
+  ["number", "Número", false],
+  ["journal", "Diario", false],
+  ["totalPayment", "Total Pago", true],
+  ["mpOperationValue", "Valor de la operación en MP", true],
+  ["memo", "Memo", false],
+];
 
 const selectors = {
   mpFile: document.querySelector("#mpFile"),
@@ -15,20 +36,32 @@ const selectors = {
   mpStatus: document.querySelector("#mpStatus"),
   sysStatus: document.querySelector("#sysStatus"),
   compareButton: document.querySelector("#compareButton"),
-  exportDiffButton: document.querySelector("#exportDiffButton"),
+  exportButton: document.querySelector("#exportButton"),
+  saveReportButton: document.querySelector("#saveReportButton"),
   resetButton: document.querySelector("#resetButton"),
   totalCount: document.querySelector("#totalCount"),
   diffCount: document.querySelector("#diffCount"),
+  missingMpCount: document.querySelector("#missingMpCount"),
+  activeReportTitle: document.querySelector("#activeReportTitle"),
+  reportTabs: document.querySelector("#reportTabs"),
   reportHead: document.querySelector("#reportHead"),
   reportBody: document.querySelector("#reportBody"),
   emptyState: document.querySelector("#emptyState"),
+  savedReports: document.querySelector("#savedReports"),
+  savedEmptyState: document.querySelector("#savedEmptyState"),
 };
 
 selectors.mpFile.addEventListener("change", (event) => handleFile(event, "mp"));
 selectors.sysFile.addEventListener("change", (event) => handleFile(event, "sys"));
 selectors.compareButton.addEventListener("click", compareFiles);
-selectors.exportDiffButton.addEventListener("click", () => exportRows("diferencias", state.report.differences));
+selectors.exportButton.addEventListener("click", exportActiveReport);
+selectors.saveReportButton.addEventListener("click", saveActiveReport);
 selectors.resetButton.addEventListener("click", resetApp);
+selectors.reportTabs.addEventListener("click", handleReportTabClick);
+selectors.savedReports.addEventListener("click", handleSavedReportAction);
+
+renderTable();
+renderSavedReports();
 
 function createSourceState() {
   return {
@@ -41,9 +74,9 @@ function createSourceState() {
 function createEmptyReport() {
   return {
     differences: [],
-    missingSystem: [],
     missingMp: [],
     matches: [],
+    missingSystem: [],
   };
 }
 
@@ -163,7 +196,7 @@ function getPreferredColumns(sourceKey, headers) {
   const positions =
     sourceKey === "mp"
       ? { sale: "K", amount: "Q" }
-      : { sale: "G", amount: "F" };
+      : { sale: "G", amount: "E" };
 
   return {
     sale: getHeaderByColumnLetter(headers, positions.sale),
@@ -172,8 +205,12 @@ function getPreferredColumns(sourceKey, headers) {
 }
 
 function getHeaderByColumnLetter(headers, letter) {
-  const index = columnLetterToIndex(letter);
-  return headers[index] || "";
+  return headers[columnLetterToIndex(letter)] || "";
+}
+
+function getValueByColumnLetter(row, sourceKey, letter) {
+  const header = getHeaderByColumnLetter(state[sourceKey].headers, letter);
+  return header ? row[header] : "";
 }
 
 function columnLetterToIndex(letter) {
@@ -206,8 +243,8 @@ function updateCompareState() {
 function compareFiles() {
   const mpColumns = getPreferredColumns("mp", state.mp.headers);
   const sysColumns = getPreferredColumns("sys", state.sys.headers);
-  const mpRecords = buildRecordMap(state.mp.rows, mpColumns.sale, mpColumns.amount);
-  const sysRecords = buildRecordMap(state.sys.rows, sysColumns.sale, sysColumns.amount);
+  const mpRecords = buildRecordMap(state.mp.rows, mpColumns.sale, mpColumns.amount, "mp");
+  const sysRecords = buildRecordMap(state.sys.rows, sysColumns.sale, sysColumns.amount, "sys");
   const report = createEmptyReport();
   const allSaleNumbers = new Set([...mpRecords.keys(), ...sysRecords.keys()]);
 
@@ -216,20 +253,17 @@ function compareFiles() {
     const sysRecord = sysRecords.get(saleNumber);
 
     if (!mpRecord) {
-      report.missingMp.push(createReportRow(saleNumber, null, sysRecord, "Falta en Mercado Pago"));
+      report.missingMp.push(createReportRow(null, sysRecord));
       return;
     }
 
     if (!sysRecord) {
-      report.missingSystem.push(createReportRow(saleNumber, mpRecord, null, "Falta en sistema"));
+      report.missingSystem.push(createReportRow(mpRecord, null));
       return;
     }
 
-    const difference = roundMoney(mpRecord.amount - sysRecord.amount);
-    const row = createReportRow(saleNumber, mpRecord, sysRecord, difference === 0 ? "Coincide" : "Diferencia");
-    row.difference = difference;
-
-    if (difference === 0) {
+    const row = createReportRow(mpRecord, sysRecord);
+    if (roundMoney(mpRecord.amount - sysRecord.amount) === 0) {
       report.matches.push(row);
     } else {
       report.differences.push(row);
@@ -237,46 +271,36 @@ function compareFiles() {
   });
 
   state.report = report;
+  state.activeReport = "differences";
   renderMetrics(allSaleNumbers.size);
   renderTable();
-
-  selectors.exportDiffButton.disabled = report.differences.length === 0;
 }
 
-function buildRecordMap(rows, saleColumn, amountColumn) {
+function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
   const records = new Map();
-  const sourceKey = rows === state.mp.rows ? "mp" : "sys";
 
-  rows.forEach((row, index) => {
+  rows.forEach((row) => {
     const saleNumber = normalizeSaleNumber(row[saleColumn]);
-    if (!saleNumber) return;
-
-    const amount = parseMoney(row[amountColumn]);
-    const previous = records.get(saleNumber);
-
-    if (previous) {
-      previous.count += 1;
-      return;
-    }
+    if (!saleNumber || records.has(saleNumber)) return;
 
     records.set(saleNumber, {
-      saleNumber,
-      amount,
-      count: 1,
-      rowNumber: index + 2,
-      sourceValues: getReportValues(row, sourceKey),
+      amount: parseMoney(row[amountColumn]),
+      sourceValues:
+        sourceKey === "sys"
+          ? {
+              date: getValueByColumnLetter(row, "sys", "A"),
+              number: getValueByColumnLetter(row, "sys", "B"),
+              journal: getValueByColumnLetter(row, "sys", "C"),
+              totalPayment: parseMoney(getValueByColumnLetter(row, "sys", "E")),
+              memo: getValueByColumnLetter(row, "sys", "G"),
+            }
+          : {
+              mpOperationValue: parseMoney(getValueByColumnLetter(row, "mp", "Q")),
+            },
     });
   });
 
   return records;
-}
-
-function getReportValues(row, sourceKey) {
-  return reportColumnLetters[sourceKey].reduce((values, letter) => {
-    const header = getHeaderByColumnLetter(state[sourceKey].headers, letter);
-    values[`${sourceKey}${letter}`] = header ? row[header] : "";
-    return values;
-  }, {});
 }
 
 function normalizeSaleNumber(value) {
@@ -309,60 +333,58 @@ function roundMoney(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function createReportRow(saleNumber, mpRecord, sysRecord, status) {
-  const mpValues = mpRecord?.sourceValues || {};
-  const sysValues = sysRecord?.sourceValues || {};
-
+function createReportRow(mpRecord, sysRecord) {
   return {
-    saleNumber,
-    sysA: sysValues.sysA ?? "",
-    sysB: sysValues.sysB ?? "",
-    sysC: sysValues.sysC ?? "",
-    sysD: sysValues.sysD ?? "",
-    mpD: mpValues.mpD ?? "",
-    mpAmount: mpRecord?.amount ?? null,
-    systemAmount: sysRecord?.amount ?? null,
-    difference: mpRecord && sysRecord ? roundMoney(mpRecord.amount - sysRecord.amount) : null,
-    mpRows: mpRecord?.count ?? 0,
-    systemRows: sysRecord?.count ?? 0,
-    status,
+    date: sysRecord?.sourceValues.date ?? "",
+    number: sysRecord?.sourceValues.number ?? "",
+    journal: sysRecord?.sourceValues.journal ?? "",
+    totalPayment: sysRecord?.sourceValues.totalPayment ?? null,
+    mpOperationValue: mpRecord?.sourceValues.mpOperationValue ?? null,
+    memo: sysRecord?.sourceValues.memo ?? "",
   };
 }
 
 function renderMetrics(total) {
   selectors.totalCount.textContent = total;
   selectors.diffCount.textContent = state.report.differences.length;
+  selectors.missingMpCount.textContent = state.report.missingMp.length;
+}
+
+function getActiveRows() {
+  return state.report[state.activeReport] || [];
+}
+
+function handleReportTabClick(event) {
+  const button = event.target.closest("[data-report-type]");
+  if (!button) return;
+  state.activeReport = button.dataset.reportType;
+  renderTable();
 }
 
 function renderTable() {
-  const rows = state.report.differences || [];
-  const columns = [
-    ["saleNumber", "Numero venta"],
-    ["sysA", "Odoo Fecha"],
-    ["sysB", "Odoo Numero"],
-    ["sysC", "Odoo Diario"],
-    ["sysD", "Odoo Cliente / Proveedor"],
-    ["mpD", "Numero de movimiento"],
-    ["mpAmount", "Valor MP"],
-    ["systemAmount", "Odoo Total Pago"],
-  ];
+  const rows = getActiveRows();
+  const reportType = reportTypes[state.activeReport];
 
-  selectors.reportHead.innerHTML = `<tr>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr>`;
-  selectors.reportBody.innerHTML = rows
-    .map((row) => {
-      return `<tr>${columns
-        .map(([key]) => {
-          const value = ["mpAmount", "systemAmount"].includes(key)
-            ? formatMoney(row[key])
-            : escapeHtml(row[key]);
-          const className = ["mpAmount", "systemAmount"].includes(key) ? " class=\"amount\"" : "";
-          return `<td${className}>${value}</td>`;
-        })
-        .join("")}</tr>`;
-    })
-    .join("");
-
+  selectors.activeReportTitle.textContent = reportType.label;
+  selectors.reportTabs.querySelectorAll("[data-report-type]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.reportType === state.activeReport);
+  });
+  selectors.reportHead.innerHTML = `<tr>${reportColumns.map(([, label]) => `<th>${label}</th>`).join("")}</tr>`;
+  selectors.reportBody.innerHTML = rows.map(createTableRow).join("");
+  selectors.emptyState.textContent =
+    state.mp.rows.length && state.sys.rows.length ? reportType.empty : "Cargá ambos archivos para comparar.";
   selectors.emptyState.hidden = rows.length > 0;
+  selectors.exportButton.disabled = rows.length === 0;
+  selectors.saveReportButton.disabled = rows.length === 0;
+}
+
+function createTableRow(row) {
+  return `<tr>${reportColumns
+    .map(([key, , isAmount]) => {
+      const value = isAmount ? formatMoney(row[key]) : escapeHtml(row[key]);
+      return `<td${isAmount ? ' class="amount"' : ""}>${value}</td>`;
+    })
+    .join("")}</tr>`;
 }
 
 function formatMoney(value) {
@@ -382,54 +404,107 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-function exportRows(name, rows) {
-  if (!rows.length) return;
-
-  const headers = [
-    "numero_venta",
-    "odoo_fecha",
-    "odoo_numero",
-    "odoo_diario",
-    "odoo_cliente_proveedor",
-    "numero_movimiento",
-    "valor_mp",
-    "odoo_total_pago",
-  ];
-  const csvRows = [
-    headers.join(";"),
-    ...rows.map((row) =>
-      [
-        row.saleNumber,
-        row.sysA,
-        row.sysB,
-        row.sysC,
-        row.sysD,
-        row.mpD,
-        row.mpAmount ?? "",
-        row.systemAmount ?? "",
-      ]
-        .map(csvCell)
-        .join(";")
-    ),
-  ];
-
-  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+function exportActiveReport() {
+  exportRows(reportTypes[state.activeReport].fileName, getActiveRows());
 }
 
-function csvCell(value) {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
+function exportRows(name, rows) {
+  if (!rows.length || !window.XLSX) return;
+
+  const exportRows = rows.map((row) =>
+    Object.fromEntries(reportColumns.map(([key, label]) => [label, row[key] ?? ""]))
+  );
+  const worksheet = XLSX.utils.json_to_sheet(exportRows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte");
+  XLSX.writeFile(workbook, `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+function saveActiveReport() {
+  const rows = getActiveRows();
+  if (!rows.length) return;
+
+  state.savedReports.unshift({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    type: state.activeReport,
+    label: reportTypes[state.activeReport].label,
+    createdAt: new Date().toISOString(),
+    sourceFiles: {
+      mp: state.mp.fileName,
+      sys: state.sys.fileName,
+    },
+    rows: rows.map((row) => ({ ...row })),
+  });
+
+  persistSavedReports();
+  renderSavedReports();
+}
+
+function loadSavedReports() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAVED_REPORTS_KEY) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedReports() {
+  localStorage.setItem(SAVED_REPORTS_KEY, JSON.stringify(state.savedReports));
+}
+
+function renderSavedReports() {
+  selectors.savedReports.innerHTML = state.savedReports
+    .map(
+      (report) => `
+        <article class="saved-report">
+          <div>
+            <strong>${escapeHtml(report.label)}</strong>
+            <span>${formatSavedDate(report.createdAt)} · ${report.rows.length} filas</span>
+            <small>MP: ${escapeHtml(report.sourceFiles?.mp || "-")} · Odoo: ${escapeHtml(report.sourceFiles?.sys || "-")}</small>
+          </div>
+          <div class="saved-report-actions">
+            <button class="small-button ghost-button" type="button" data-action="export" data-report-id="${report.id}">Excel</button>
+            <button class="small-button danger-button" type="button" data-action="delete" data-report-id="${report.id}">Borrar</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+  selectors.savedEmptyState.hidden = state.savedReports.length > 0;
+}
+
+function formatSavedDate(value) {
+  return new Intl.DateTimeFormat("es-AR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function handleSavedReportAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+
+  const report = state.savedReports.find((item) => item.id === button.dataset.reportId);
+  if (!report) return;
+
+  if (button.dataset.action === "export") {
+    exportRows(reportTypes[report.type]?.fileName || "reporte-guardado", report.rows);
+    return;
+  }
+
+  if (button.dataset.action === "delete" && confirm(`¿Borrar el reporte "${report.label}"?`)) {
+    state.savedReports = state.savedReports.filter((item) => item.id !== report.id);
+    persistSavedReports();
+    renderSavedReports();
+  }
 }
 
 function resetApp() {
   state.mp = createSourceState();
   state.sys = createSourceState();
   state.report = createEmptyReport();
+  state.activeReport = "differences";
   selectors.mpFile.value = "";
   selectors.sysFile.value = "";
   updateStatus("mp", "Sin archivo");
@@ -437,5 +512,4 @@ function resetApp() {
   updateCompareState();
   renderMetrics(0);
   renderTable();
-  selectors.exportDiffButton.disabled = true;
 }

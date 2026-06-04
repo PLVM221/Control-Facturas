@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260602-1636" />
+    <link rel="stylesheet" href="styles.css?v=20260604-1" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script defer src="app.js?v=20260602-1632"></script>
+    <script defer src="app.js?v=20260604-1"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -46,10 +46,11 @@
 
       <section class="actions-row" aria-label="Acciones">
         <button id="compareButton" type="button" disabled>Comparar</button>
-        <button id="exportDiffButton" type="button" disabled>Exportar diferencias</button>
+        <button id="exportButton" type="button" disabled>Exportar reporte actual</button>
+        <button id="saveReportButton" class="ghost-button" type="button" disabled>Guardar reporte actual</button>
       </section>
 
-      <section class="metrics-grid compact" aria-label="Metricas">
+      <section class="metrics-grid compact" aria-label="Métricas">
         <div class="metric">
           <span>Analizadas</span>
           <strong id="totalCount">0</strong>
@@ -58,9 +59,20 @@
           <span>Diferencias</span>
           <strong id="diffCount">0</strong>
         </div>
+        <div class="metric danger">
+          <span>Odoo sin Mercado Pago</span>
+          <strong id="missingMpCount">0</strong>
+        </div>
       </section>
 
       <section class="report-shell">
+        <div class="report-toolbar">
+          <h2 id="activeReportTitle">Diferencias</h2>
+          <div class="report-tabs" id="reportTabs" aria-label="Tipo de reporte">
+            <button class="tab-button active" type="button" data-report-type="differences">Diferencias</button>
+            <button class="tab-button" type="button" data-report-type="missingMp">Odoo sin Mercado Pago</button>
+          </div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead id="reportHead"></thead>
@@ -68,6 +80,17 @@
           </table>
           <p class="empty-state" id="emptyState">Cargá ambos archivos para comparar.</p>
         </div>
+      </section>
+
+      <section class="saved-section" aria-labelledby="savedTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Historial local</p>
+            <h2 id="savedTitle">Reportes guardados</h2>
+          </div>
+        </div>
+        <div class="saved-reports" id="savedReports"></div>
+        <p class="saved-empty" id="savedEmptyState">Todavía no hay reportes guardados.</p>
       </section>
     </main>
   </body>

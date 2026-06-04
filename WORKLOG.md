@@ -37,3 +37,12 @@
 | 09:45 | refactor(web): dejar reporte solo para diferencias |
 | 09:45 | refactor(web): quitar metricas de faltantes |
 | 09:47 | test: node --check app.js OK |
+
+### 2026-06-04
+
+| Hora | Cambio |
+|------|--------|
+| 09:30 | feat(web): mostrar reportes con columnas Odoo A/B/C/E/G y MP Q |
+| 09:30 | feat(web): agregar reporte de operaciones Odoo sin Mercado Pago |
+| 09:30 | feat(web): guardar, borrar y exportar reportes guardados en Excel |
+| 09:31 | test: node --check, git diff --check y prueba funcional simulada OK |

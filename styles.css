@@ -245,7 +245,7 @@ input[type="number"] {
 }
 
 .metrics-grid.compact {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .metric {
@@ -280,6 +280,44 @@ input[type="number"] {
 
 .report-shell {
   overflow: hidden;
+}
+
+.report-toolbar,
+.section-heading,
+.saved-report,
+.saved-report-actions,
+.report-tabs {
+  display: flex;
+  align-items: center;
+}
+
+.report-toolbar {
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.report-tabs {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab-button,
+.small-button {
+  min-height: 36px;
+  padding: 0 14px;
+  box-shadow: none;
+}
+
+.tab-button {
+  color: var(--muted);
+  background: #f2f2f7;
+}
+
+.tab-button.active {
+  color: #ffffff;
+  background: var(--accent);
 }
 
 .table-wrap {
@@ -334,6 +372,69 @@ td.amount {
   text-align: center;
 }
 
+.saved-section {
+  margin-top: 28px;
+}
+
+.section-heading {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.saved-reports {
+  display: grid;
+  gap: 10px;
+}
+
+.saved-report {
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+}
+
+.saved-report > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.saved-report span,
+.saved-report small,
+.saved-empty {
+  color: var(--muted);
+}
+
+.saved-report span {
+  font-size: 13px;
+}
+
+.saved-report-actions {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.danger-button {
+  color: var(--danger);
+  background: #fff0f1;
+  box-shadow: none;
+}
+
+.danger-button:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--danger);
+}
+
+.saved-empty {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
 @media (max-width: 780px) {
   .app-shell {
     width: min(100% - 20px, 1180px);
@@ -359,5 +460,15 @@ td.amount {
 
   .actions-row button {
     width: 100%;
+  }
+
+  .report-toolbar,
+  .saved-report {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .saved-report-actions button {
+    flex: 1;
   }
 }
