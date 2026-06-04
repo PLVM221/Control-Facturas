@@ -17,9 +17,9 @@ const state = {
 
 const reportTypes = {
   differences: {
-    label: "Diferencias",
+    label: "Diferencias en Montos",
     empty: "No hay operaciones con importes diferentes.",
-    fileName: "diferencias",
+    fileName: "diferencias-en-montos",
   },
   missingMp: {
     label: "Odoo sin Mercado Pago",

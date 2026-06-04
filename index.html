@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css?v=20260604-6" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script defer src="supabase-config.js?v=20260604-3"></script>
-    <script defer src="app.js?v=20260604-7"></script>
+    <script defer src="app.js?v=20260604-8"></script>
   </head>
   <body>
     <section class="location-gate" id="locationGate" aria-labelledby="locationTitle">
@@ -75,7 +75,7 @@
           <strong id="totalCount">0</strong>
         </div>
         <div class="metric warning">
-          <span>Diferencias</span>
+          <span>Diferencias en Montos</span>
           <strong id="diffCount">0</strong>
         </div>
         <div class="metric danger">
@@ -90,9 +90,9 @@
 
       <section class="report-shell">
         <div class="report-toolbar">
-          <h2 id="activeReportTitle">Diferencias</h2>
+          <h2 id="activeReportTitle">Diferencias en Montos</h2>
           <div class="report-tabs" id="reportTabs" aria-label="Tipo de reporte">
-            <button class="tab-button active" type="button" data-report-type="differences">Diferencias</button>
+            <button class="tab-button active" type="button" data-report-type="differences">Diferencias en Montos</button>
             <button class="tab-button" type="button" data-report-type="missingMp">Odoo sin Mercado Pago</button>
             <button class="tab-button" type="button" data-report-type="emptyMemo">Ventas sin Memo</button>
           </div>

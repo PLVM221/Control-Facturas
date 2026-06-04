@@ -55,3 +55,4 @@
 | 12:10 | feat(web): preparar sincronización de reportes entre equipos con Supabase |
 | 12:25 | config(web): agregar Project URL de Supabase |
 | 12:35 | config(web): agregar Publishable key de Supabase |
+| 12:50 | chore(web): renombrar reporte a Diferencias en Montos |
