@@ -61,3 +61,4 @@
 | 13:35 | chore(web): quitar resumen de conciliación de Mercado Pago |
 | 13:50 | fix(web): permitir borrado local y reintentar sincronización con Supabase |
 | 14:10 | feat(web): proteger acceso a cada puesto con contraseña |
+| 14:25 | fix(web): aclarar cuando falta crear la tabla de Supabase |

@@ -597,7 +597,7 @@ async function loadSavedReports() {
       return savedReports;
     } catch (error) {
       console.error(error);
-      setSyncStatus("Sin conexión · guardado local", false);
+      setSyncStatus(getSyncErrorStatus(error), false);
     }
   } else {
     setSyncStatus("Guardado local", false);
@@ -639,7 +639,7 @@ async function persistSavedReports() {
       setSyncStatus("Sincronizado", true);
     } catch (error) {
       console.error(error);
-      setSyncStatus("Sin conexión · guardado local", false);
+      setSyncStatus(getSyncErrorStatus(error), false);
     }
   }
 
@@ -829,6 +829,12 @@ function isCloudConfigured() {
 function setSyncStatus(text, ready) {
   selectors.syncStatus.textContent = text;
   selectors.syncStatus.classList.toggle("ready", ready);
+}
+
+function getSyncErrorStatus(error) {
+  return error.message.includes("PGRST205")
+    ? "Falta crear tabla en Supabase · guardado local"
+    : "Sin conexión · guardado local";
 }
 
 async function supabaseRequest(path, options = {}) {
