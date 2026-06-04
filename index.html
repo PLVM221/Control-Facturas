@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260604-2" />
+    <link rel="stylesheet" href="styles.css?v=20260604-3" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script defer src="app.js?v=20260604-2"></script>
+    <script defer src="app.js?v=20260604-3"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -19,27 +19,27 @@
       </section>
 
       <section class="upload-grid" aria-label="Carga de archivos">
-        <article class="panel">
+        <article class="panel" id="mpPanel">
           <div class="panel-header">
             <h2>Mercado Pago</h2>
             <span class="status-pill" id="mpStatus">Sin archivo</span>
           </div>
-          <label class="file-drop">
+          <label class="file-drop" id="mpDrop">
             <input id="mpFile" type="file" accept=".csv,.txt,.xls,.xlsx" />
-            <span>Seleccionar archivo</span>
-            <small>CSV, TXT, XLS o XLSX</small>
+            <span id="mpDropAction">Seleccionar archivo</span>
+            <small id="mpDropDetail">CSV, TXT, XLS o XLSX</small>
           </label>
         </article>
 
-        <article class="panel">
+        <article class="panel" id="sysPanel">
           <div class="panel-header">
             <h2>Odoo</h2>
             <span class="status-pill" id="sysStatus">Sin archivo</span>
           </div>
-          <label class="file-drop">
+          <label class="file-drop" id="sysDrop">
             <input id="sysFile" type="file" accept=".csv,.txt,.xls,.xlsx" />
-            <span>Seleccionar archivo</span>
-            <small>CSV, TXT, XLS o XLSX</small>
+            <span id="sysDropAction">Seleccionar archivo</span>
+            <small id="sysDropDetail">CSV, TXT, XLS o XLSX</small>
           </label>
         </article>
       </section>

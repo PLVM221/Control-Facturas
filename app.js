@@ -40,6 +40,12 @@ const selectors = {
   sysFile: document.querySelector("#sysFile"),
   mpStatus: document.querySelector("#mpStatus"),
   sysStatus: document.querySelector("#sysStatus"),
+  mpPanel: document.querySelector("#mpPanel"),
+  sysPanel: document.querySelector("#sysPanel"),
+  mpDropAction: document.querySelector("#mpDropAction"),
+  sysDropAction: document.querySelector("#sysDropAction"),
+  mpDropDetail: document.querySelector("#mpDropDetail"),
+  sysDropDetail: document.querySelector("#sysDropDetail"),
   compareButton: document.querySelector("#compareButton"),
   exportButton: document.querySelector("#exportButton"),
   saveReportButton: document.querySelector("#saveReportButton"),
@@ -229,8 +235,16 @@ function columnLetterToIndex(letter) {
 
 function updateStatus(sourceKey, text) {
   const status = selectors[`${sourceKey}Status`];
+  const panel = selectors[`${sourceKey}Panel`];
+  const dropAction = selectors[`${sourceKey}DropAction`];
+  const dropDetail = selectors[`${sourceKey}DropDetail`];
+  const ready = state[sourceKey].rows.length > 0;
+
   status.textContent = text;
-  status.classList.toggle("ready", state[sourceKey].rows.length > 0);
+  status.classList.toggle("ready", ready);
+  panel.classList.toggle("loaded", ready);
+  dropAction.textContent = ready ? "Cambiar archivo" : "Seleccionar archivo";
+  dropDetail.textContent = ready ? state[sourceKey].fileName : "CSV, TXT, XLS o XLSX";
 }
 
 function updateCompareState() {

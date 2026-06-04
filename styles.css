@@ -151,6 +151,7 @@ h2 {
 
 .panel {
   padding: 20px;
+  transition: padding 180ms ease;
 }
 
 .panel-header {
@@ -186,7 +187,7 @@ h2 {
   background: linear-gradient(180deg, #ffffff 0%, var(--surface-soft) 100%);
   cursor: pointer;
   text-align: center;
-  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  transition: border-color 140ms ease, box-shadow 140ms ease, min-height 180ms ease, transform 140ms ease;
 }
 
 .file-drop:hover {
@@ -212,6 +213,34 @@ h2 {
 .file-drop small,
 label {
   color: var(--muted);
+}
+
+.file-drop small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel.loaded {
+  padding: 16px 20px;
+}
+
+.panel.loaded .panel-header {
+  margin-bottom: 10px;
+}
+
+.panel.loaded .file-drop {
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: start;
+  min-height: 48px;
+  padding: 8px 14px;
+  border-style: solid;
+  text-align: left;
+}
+
+.panel.loaded .file-drop span {
+  font-size: 13px;
 }
 
 label {
