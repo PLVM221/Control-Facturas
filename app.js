@@ -32,6 +32,11 @@ const reportTypes = {
     empty: "Todas las operaciones de Odoo aparecen en Mercado Pago.",
     fileName: "odoo-sin-mercado-pago",
   },
+  missingSystem: {
+    label: "Mercado Pago sin Odoo",
+    empty: "Todas las operaciones de Mercado Pago aparecen en Odoo.",
+    fileName: "mercado-pago-sin-odoo",
+  },
   emptyMemo: {
     label: "Ventas sin MP",
     empty: "No hay ventas de Odoo con la columna Memo vacía.",
@@ -76,6 +81,7 @@ const selectors = {
   totalCount: document.querySelector("#totalCount"),
   diffCount: document.querySelector("#diffCount"),
   missingMpCount: document.querySelector("#missingMpCount"),
+  missingSystemCount: document.querySelector("#missingSystemCount"),
   emptyMemoCount: document.querySelector("#emptyMemoCount"),
   reconciliationSummary: document.querySelector("#reconciliationSummary"),
   activeReportTitle: document.querySelector("#activeReportTitle"),
@@ -394,6 +400,7 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
         sourceKey === "sys"
           ? createSystemRecord(row).sourceValues
           : {
+              number: getValueByColumnLetter(row, "mp", "K"),
               mpOperationValue: parseMoney(getValueByColumnLetter(row, "mp", "Q")),
             },
     });
@@ -452,7 +459,7 @@ function roundMoney(value) {
 function createReportRow(mpRecord, sysRecord) {
   return {
     date: sysRecord?.sourceValues.date ?? "",
-    number: sysRecord?.sourceValues.number ?? "",
+    number: sysRecord?.sourceValues.number ?? mpRecord?.sourceValues.number ?? "",
     journal: sysRecord?.sourceValues.journal ?? "",
     totalPayment: sysRecord?.sourceValues.totalPayment ?? null,
     mpOperationValue: mpRecord?.sourceValues.mpOperationValue ?? null,
@@ -465,6 +472,7 @@ function renderMetrics(details) {
   selectors.totalCount.textContent = matches;
   selectors.diffCount.textContent = state.report.differences.length;
   selectors.missingMpCount.textContent = state.report.missingMp.length;
+  selectors.missingSystemCount.textContent = state.report.missingSystem.length;
   selectors.emptyMemoCount.textContent = state.report.emptyMemo.length;
 
   if (typeof details === "number") {
