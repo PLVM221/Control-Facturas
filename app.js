@@ -600,7 +600,7 @@ async function loadSavedReports() {
         `saved_reports?location=eq.${encodeURIComponent(state.location)}&select=*&order=created_at.desc`
       );
       setSyncStatus("Sincronizado", true);
-      const savedReports = remoteReports.map(fromRemoteReport);
+      const savedReports = remoteReports.map(fromRemoteReport).map(normalizeSavedReport);
       localStorage.setItem(getSavedReportsKey(), JSON.stringify(savedReports));
       return savedReports;
     } catch (error) {
@@ -628,10 +628,24 @@ function loadLocalSavedReports() {
     }
 
     const saved = JSON.parse(localStorage.getItem(stationKey) || "[]");
-    return Array.isArray(saved) ? saved : [];
+    const reports = Array.isArray(saved) ? saved : [];
+    const normalizedReports = reports.map(normalizeSavedReport);
+
+    if (JSON.stringify(reports) !== JSON.stringify(normalizedReports)) {
+      localStorage.setItem(stationKey, JSON.stringify(normalizedReports));
+    }
+
+    return normalizedReports;
   } catch {
     return [];
   }
+}
+
+function normalizeSavedReport(report) {
+  if (report.type === "emptyMemo" && report.label === "Ventas sin Memo") {
+    return { ...report, label: reportTypes.emptyMemo.label };
+  }
+  return report;
 }
 
 async function persistSavedReports() {

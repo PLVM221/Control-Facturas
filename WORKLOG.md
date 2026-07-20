@@ -62,3 +62,12 @@
 | 13:50 | fix(web): permitir borrado local y reintentar sincronización con Supabase |
 | 14:10 | feat(web): proteger acceso a cada puesto con contraseña |
 | 14:25 | fix(web): aclarar cuando falta crear la tabla de Supabase |
+
+### 2026-07-20
+
+| Hora | Cambio |
+|------|--------|
+| 15:45 | feat(web): agregar métrica y reporte Mercado Pago sin Odoo |
+| 15:47 | deploy(web): actualizar main y gh-pages con el nuevo reporte |
+| 15:53 | fix(web): normalizar nombre histórico Ventas sin Memo a Ventas sin MP |
+| 15:53 | test: node --check app.js y git diff --check OK |
