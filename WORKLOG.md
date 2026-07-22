@@ -79,3 +79,5 @@
 |------|--------|
 | 09:23 | fix(web): filtrar filas de Mercado Pago por puesto usando columna N |
 | 09:23 | test: node --check app.js y git diff --check OK |
+| 10:06 | fix(web): filtrar Mercado Pago al mes en curso usando fecha de columna B |
+| 10:06 | test: node --check app.js y git diff --check OK |

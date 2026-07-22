@@ -152,7 +152,7 @@ async function handleFile(event, sourceKey) {
     updateStatus(
       sourceKey,
       sourceKey === "mp"
-        ? `Cargado: ${rows.length} filas de ${locations[state.location]}`
+        ? `Cargado: ${rows.length} filas de ${locations[state.location]} del mes actual`
         : `Cargado: ${rows.length} filas`
     );
     updateCompareState();
@@ -165,18 +165,62 @@ async function handleFile(event, sourceKey) {
 
 function filterMpRowsByLocation(parsed) {
   const locationColumn = getHeaderByColumnLetter(parsed.headers, "N");
+  const dateColumn = getHeaderByColumnLetter(parsed.headers, "B");
   if (!locationColumn) {
     throw new Error("el archivo de Mercado Pago no tiene columna N");
+  }
+  if (!dateColumn) {
+    throw new Error("el archivo de Mercado Pago no tiene columna B");
   }
 
   const expectedLocation = normalizeLocationName(locations[state.location]);
   return parsed.rows.filter(
-    (row) => normalizeLocationName(row[locationColumn]) === expectedLocation
+    (row) =>
+      normalizeLocationName(row[locationColumn]) === expectedLocation &&
+      isDateInCurrentMonth(row[dateColumn])
   );
 }
 
 function normalizeLocationName(value) {
   return String(value ?? "").trim().toLocaleLowerCase("es-AR");
+}
+
+function isDateInCurrentMonth(value, now = new Date()) {
+  const date = parseTransactionDate(value);
+  return Boolean(
+    date &&
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth()
+  );
+}
+
+function parseTransactionDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+
+  const dayFirstMatch = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if (dayFirstMatch) {
+    return createValidDate(dayFirstMatch[3], dayFirstMatch[2], dayFirstMatch[1]);
+  }
+
+  const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    return createValidDate(isoMatch[1], isoMatch[2], isoMatch[3]);
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function createValidDate(year, month, day) {
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return date.getFullYear() === Number(year) &&
+    date.getMonth() === Number(month) - 1 &&
+    date.getDate() === Number(day)
+    ? date
+    : null;
 }
 
 async function parseFile(file) {
