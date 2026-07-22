@@ -466,6 +466,7 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
         sourceKey === "sys"
           ? createSystemRecord(row).sourceValues
           : {
+              date: getValueByColumnLetter(row, "mp", "B"),
               number: getValueByColumnLetter(row, "mp", "K"),
               mpOperationValue: parseMoney(getValueByColumnLetter(row, "mp", "Q")),
             },
@@ -524,7 +525,7 @@ function roundMoney(value) {
 
 function createReportRow(mpRecord, sysRecord) {
   return {
-    date: sysRecord?.sourceValues.date ?? "",
+    date: sysRecord?.sourceValues.date ?? mpRecord?.sourceValues.date ?? "",
     number: sysRecord?.sourceValues.number ?? mpRecord?.sourceValues.number ?? "",
     journal: sysRecord?.sourceValues.journal ?? "",
     totalPayment: sysRecord?.sourceValues.totalPayment ?? null,

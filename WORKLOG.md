@@ -81,3 +81,5 @@
 | 09:23 | test: node --check app.js y git diff --check OK |
 | 10:06 | fix(web): filtrar Mercado Pago al mes en curso usando fecha de columna B |
 | 10:06 | test: node --check app.js y git diff --check OK |
+| 10:11 | feat(web): mostrar fecha de columna B en reporte Mercado Pago sin Odoo |
+| 10:11 | test: node --check app.js y git diff --check OK |
