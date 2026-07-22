@@ -72,3 +72,10 @@
 | 15:53 | fix(web): normalizar nombre histórico Ventas sin Memo a Ventas sin MP |
 | 15:53 | test: node --check app.js y git diff --check OK |
 | 15:54 | deploy(web): forzar recarga de app.js y publicar main/gh-pages |
+
+### 2026-07-22
+
+| Hora | Cambio |
+|------|--------|
+| 09:23 | fix(web): filtrar filas de Mercado Pago por puesto usando columna N |
+| 09:23 | test: node --check app.js y git diff --check OK |

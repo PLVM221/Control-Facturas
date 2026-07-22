@@ -139,8 +139,9 @@ async function handleFile(event, sourceKey) {
 
   try {
     const parsed = await parseFile(file);
+    const rows = sourceKey === "mp" ? filterMpRowsByLocation(parsed) : parsed.rows;
     state[sourceKey] = {
-      rows: parsed.rows,
+      rows,
       headers: parsed.headers,
       fileName: file.name,
     };
@@ -148,13 +149,34 @@ async function handleFile(event, sourceKey) {
     state.report = createEmptyReport();
     renderMetrics(0);
     renderTable();
-    updateStatus(sourceKey, `Cargado: ${parsed.rows.length} filas`);
+    updateStatus(
+      sourceKey,
+      sourceKey === "mp"
+        ? `Cargado: ${rows.length} filas de ${locations[state.location]}`
+        : `Cargado: ${rows.length} filas`
+    );
     updateCompareState();
   } catch (error) {
     state[sourceKey] = createSourceState();
     updateStatus(sourceKey, "Error");
     alert(`No se pudo leer ${file.name}: ${error.message}`);
   }
+}
+
+function filterMpRowsByLocation(parsed) {
+  const locationColumn = getHeaderByColumnLetter(parsed.headers, "N");
+  if (!locationColumn) {
+    throw new Error("el archivo de Mercado Pago no tiene columna N");
+  }
+
+  const expectedLocation = normalizeLocationName(locations[state.location]);
+  return parsed.rows.filter(
+    (row) => normalizeLocationName(row[locationColumn]) === expectedLocation
+  );
+}
+
+function normalizeLocationName(value) {
+  return String(value ?? "").trim().toLocaleLowerCase("es-AR");
 }
 
 async function parseFile(file) {
