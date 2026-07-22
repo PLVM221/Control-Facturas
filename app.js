@@ -20,6 +20,7 @@ const state = {
   activeReport: "differences",
   savedReports: [],
 };
+let savedReportsSyncInProgress = false;
 
 const reportTypes = {
   differences: {
@@ -107,6 +108,10 @@ selectors.locationGate.addEventListener("click", handleLocationChoice);
 selectors.changeLocationButton.addEventListener("click", showLocationGate);
 selectors.locationLogin.addEventListener("submit", handleLocationLogin);
 selectors.cancelLocationLogin.addEventListener("click", resetLocationLogin);
+window.addEventListener("online", retrySavedReportsSync);
+window.setInterval(() => {
+  if (!selectors.syncStatus.classList.contains("ready")) retrySavedReportsSync();
+}, 30000);
 
 const sessionLocation = sessionStorage.getItem(ACTIVE_LOCATION_KEY);
 if (locations[sessionLocation]) {
@@ -719,11 +724,10 @@ async function persistSavedReports() {
   if (isCloudConfigured()) {
     try {
       setSyncStatus("Sincronizando...", false);
-      const latestReport = state.savedReports[0];
       await supabaseRequest("saved_reports?on_conflict=id", {
         method: "POST",
         headers: { Prefer: "resolution=ignore-duplicates" },
-        body: JSON.stringify(toRemoteReport(latestReport)),
+        body: JSON.stringify(state.savedReports.map(toRemoteReport)),
       });
       setSyncStatus("Sincronizado", true);
     } catch (error) {
@@ -733,6 +737,18 @@ async function persistSavedReports() {
   }
 
   localStorage.setItem(getSavedReportsKey(), JSON.stringify(state.savedReports));
+}
+
+async function retrySavedReportsSync() {
+  if (!state.location || !isCloudConfigured() || savedReportsSyncInProgress) return;
+
+  savedReportsSyncInProgress = true;
+  try {
+    state.savedReports = await loadSavedReports();
+    renderSavedReports();
+  } finally {
+    savedReportsSyncInProgress = false;
+  }
 }
 
 function getSavedReportsKey() {

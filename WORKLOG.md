@@ -83,3 +83,5 @@
 | 10:06 | test: node --check app.js y git diff --check OK |
 | 10:11 | feat(web): mostrar fecha de columna B en reporte Mercado Pago sin Odoo |
 | 10:11 | test: node --check app.js y git diff --check OK |
+| 11:28 | fix(sync): subir reportes locales pendientes al recuperar conexion |
+| 11:28 | test: node --check app.js y git diff --check OK |
