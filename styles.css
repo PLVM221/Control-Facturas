@@ -366,6 +366,24 @@ input[type="number"] {
   padding: 14px;
 }
 
+.transaction-search {
+  display: flex;
+  flex: 1 1 360px;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.transaction-search input {
+  flex: 1 1 auto;
+  min-width: 180px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 16px;
+  color: var(--text);
+  background: #ffffff;
+}
+
 .metrics-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 16px;
@@ -623,6 +641,11 @@ td.amount {
 
   .actions-row button {
     width: 100%;
+  }
+
+  .transaction-search {
+    flex-direction: column;
+    margin-left: 0;
   }
 
   .topbar-actions,

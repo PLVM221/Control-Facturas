@@ -4,10 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260801-1" />
+    <link rel="stylesheet" href="styles.css?v=20260801-2" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script defer src="supabase-config.js?v=20260604-3"></script>
-    <script defer src="app.js?v=20260801-1"></script>
+    <script defer src="app.js?v=20260801-2"></script>
   </head>
   <body>
     <section class="location-gate" id="locationGate" aria-labelledby="locationTitle">
@@ -91,6 +91,10 @@
         <button id="compareButton" type="button" disabled>Comparar</button>
         <button id="exportButton" type="button" disabled>Exportar reporte actual</button>
         <button id="saveReportButton" class="ghost-button" type="button" disabled>Guardar reporte actual</button>
+        <form class="transaction-search" id="transactionSearch">
+          <input id="transactionQuery" type="search" placeholder="Número de transacción" aria-label="Número de transacción" />
+          <button id="searchTransactionButton" class="ghost-button" type="submit" disabled>Buscar transacción</button>
+        </form>
       </section>
 
       <section class="metrics-grid compact" aria-label="Métricas">

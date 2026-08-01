@@ -54,6 +54,11 @@ const reportTypes = {
     empty: "Todas las transferencias de Rosario Centro aparecen en Odoo.",
     fileName: "transferencias-mp-sin-odoo",
   },
+  transactionSearch: {
+    label: "Búsqueda de transacción",
+    empty: "No se encontró la transacción en los archivos cargados.",
+    fileName: "busqueda-de-transaccion",
+  },
 };
 
 const reportColumns = [
@@ -70,6 +75,15 @@ const transferReportColumns = [
   ["transferLocation", "Sucursal", false],
   ["transferAmount", "Importe", true],
   ["transferDate", "Fecha", false],
+];
+
+const transactionSearchColumns = [
+  ["source", "Origen", false],
+  ["date", "Fecha", false],
+  ["number", "Número", false],
+  ["detail", "Diario / Sucursal", false],
+  ["amount", "Importe", true],
+  ["memo", "Memo", false],
 ];
 
 const selectors = {
@@ -98,6 +112,9 @@ const selectors = {
   mpDropDetail: document.querySelector("#mpDropDetail"),
   sysDropDetail: document.querySelector("#sysDropDetail"),
   transferDropDetail: document.querySelector("#transferDropDetail"),
+  transactionSearch: document.querySelector("#transactionSearch"),
+  transactionQuery: document.querySelector("#transactionQuery"),
+  searchTransactionButton: document.querySelector("#searchTransactionButton"),
   compareButton: document.querySelector("#compareButton"),
   exportButton: document.querySelector("#exportButton"),
   saveReportButton: document.querySelector("#saveReportButton"),
@@ -124,6 +141,7 @@ const selectors = {
 selectors.mpFile.addEventListener("change", (event) => handleFile(event, "mp"));
 selectors.sysFile.addEventListener("change", (event) => handleFile(event, "sys"));
 selectors.transferFile.addEventListener("change", (event) => handleFile(event, "transfer"));
+selectors.transactionSearch.addEventListener("submit", searchTransaction);
 selectors.compareButton.addEventListener("click", compareFiles);
 selectors.exportButton.addEventListener("click", exportActiveReport);
 selectors.saveReportButton.addEventListener("click", saveActiveReport);
@@ -163,6 +181,7 @@ function createEmptyReport() {
     missingSystem: [],
     transferDifferences: [],
     transferMissingSystem: [],
+    transactionSearch: [],
   };
 }
 
@@ -451,6 +470,61 @@ function updateCompareState() {
     transferReady;
 
   selectors.compareButton.disabled = !ready;
+  selectors.searchTransactionButton.disabled = !(
+    state.mp.rows.length || state.sys.rows.length || state.transfer.rows.length
+  );
+}
+
+function searchTransaction(event) {
+  event.preventDefault();
+  const query = normalizeSaleNumber(selectors.transactionQuery.value);
+  if (!query) {
+    selectors.transactionQuery.focus();
+    return;
+  }
+
+  const results = [];
+  state.mp.rows.forEach((row) => {
+    if (normalizeSaleNumber(getValueByColumnLetter(row, "mp", "K")) !== query) return;
+    results.push({
+      source: "Mercado Pago",
+      date: getValueByColumnLetter(row, "mp", "B"),
+      number: getValueByColumnLetter(row, "mp", "K"),
+      detail: "",
+      amount: parseMoney(getValueByColumnLetter(row, "mp", "Q")),
+      memo: "",
+    });
+  });
+
+  state.sys.rows.forEach((row) => {
+    const memo = getValueByColumnLetter(row, "sys", "G");
+    const number = getValueByColumnLetter(row, "sys", "B");
+    if (normalizeSaleNumber(memo) !== query && normalizeSaleNumber(number) !== query) return;
+    results.push({
+      source: "Odoo",
+      date: getValueByColumnLetter(row, "sys", "A"),
+      number,
+      detail: getValueByColumnLetter(row, "sys", "C"),
+      amount: parseMoney(getValueByColumnLetter(row, "sys", "F")),
+      memo,
+    });
+  });
+
+  state.transfer.rows.forEach((row) => {
+    if (normalizeSaleNumber(getValueByColumnLetter(row, "transfer", "B")) !== query) return;
+    results.push({
+      source: "Transferencias MP",
+      date: getValueByColumnLetter(row, "transfer", "G"),
+      number: getValueByColumnLetter(row, "transfer", "B"),
+      detail: getValueByColumnLetter(row, "transfer", "AA"),
+      amount: parseMoney(getValueByColumnLetter(row, "transfer", "H")),
+      memo: "",
+    });
+  });
+
+  state.report.transactionSearch = results;
+  state.activeReport = "transactionSearch";
+  renderTable();
 }
 
 function compareFiles() {
@@ -682,16 +756,22 @@ function renderTable() {
   });
   selectors.reportHead.innerHTML = `<tr>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr>`;
   selectors.reportBody.innerHTML = rows.map((row) => createTableRow(row, columns)).join("");
+  const hasAnySource = state.mp.rows.length || state.sys.rows.length || state.transfer.rows.length;
   selectors.emptyState.textContent =
-    state.mp.rows.length && state.sys.rows.length && state.transfer.rows.length
-      ? reportType.empty
-      : "Cargá los tres archivos para comparar.";
+    state.activeReport === "transactionSearch"
+      ? hasAnySource
+        ? reportType.empty
+        : "Cargá al menos un archivo para buscar."
+      : state.mp.rows.length && state.sys.rows.length && state.transfer.rows.length
+        ? reportType.empty
+        : "Cargá los tres archivos para comparar.";
   selectors.emptyState.hidden = rows.length > 0;
   selectors.exportButton.disabled = rows.length === 0;
   selectors.saveReportButton.disabled = rows.length === 0;
 }
 
 function getReportColumns(reportType) {
+  if (reportType === "transactionSearch") return transactionSearchColumns;
   return reportType.startsWith("transfer") ? transferReportColumns : reportColumns;
 }
 
@@ -968,6 +1048,7 @@ function resetApp() {
   selectors.mpFile.value = "";
   selectors.sysFile.value = "";
   selectors.transferFile.value = "";
+  selectors.transactionQuery.value = "";
   updateStatus("mp", "Sin archivo");
   updateStatus("sys", "Sin archivo");
   updateStatus("transfer", "Sin archivo");
