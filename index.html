@@ -4,10 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260720-1" />
+    <link rel="stylesheet" href="styles.css?v=20260801-1" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script defer src="supabase-config.js?v=20260604-3"></script>
-    <script defer src="app.js?v=20260722-4"></script>
+    <script defer src="app.js?v=20260801-1"></script>
   </head>
   <body>
     <section class="location-gate" id="locationGate" aria-labelledby="locationTitle">
@@ -73,6 +73,18 @@
             <small id="sysDropDetail">CSV, TXT, XLS o XLSX</small>
           </label>
         </article>
+
+        <article class="panel" id="transferPanel">
+          <div class="panel-header">
+            <h2>Transferencias MP</h2>
+            <span class="status-pill" id="transferStatus">Sin archivo</span>
+          </div>
+          <label class="file-drop" id="transferDrop">
+            <input id="transferFile" type="file" accept=".csv,.txt,.xls,.xlsx" />
+            <span id="transferDropAction">Seleccionar archivo</span>
+            <small id="transferDropDetail">CSV, TXT, XLS o XLSX</small>
+          </label>
+        </article>
       </section>
 
       <section class="actions-row" aria-label="Acciones">
@@ -102,6 +114,14 @@
           <span>Ventas sin MP</span>
           <strong id="emptyMemoCount">0</strong>
         </div>
+        <div class="metric warning">
+          <span>Diferencias Transferencias MP</span>
+          <strong id="transferDiffCount">0</strong>
+        </div>
+        <div class="metric danger">
+          <span>Transferencias MP sin Odoo</span>
+          <strong id="transferMissingCount">0</strong>
+        </div>
       </section>
 
       <section class="reconciliation-summary" id="reconciliationSummary" hidden></section>
@@ -114,6 +134,8 @@
             <button class="tab-button" type="button" data-report-type="missingMp">Odoo sin Mercado Pago</button>
             <button class="tab-button" type="button" data-report-type="missingSystem">Mercado Pago sin Odoo</button>
             <button class="tab-button" type="button" data-report-type="emptyMemo">Ventas sin MP</button>
+            <button class="tab-button" type="button" data-report-type="transferDifferences">Diferencias Transferencias MP</button>
+            <button class="tab-button" type="button" data-report-type="transferMissingSystem">Transferencias MP sin Odoo</button>
           </div>
         </div>
         <div class="table-wrap">

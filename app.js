@@ -16,6 +16,7 @@ const state = {
   pendingLocation: "",
   mp: createSourceState(),
   sys: createSourceState(),
+  transfer: createSourceState(),
   report: createEmptyReport(),
   activeReport: "differences",
   savedReports: [],
@@ -43,6 +44,16 @@ const reportTypes = {
     empty: "No hay ventas de Odoo con la columna Memo vacía.",
     fileName: "ventas-sin-memo",
   },
+  transferDifferences: {
+    label: "Diferencias Transferencias MP",
+    empty: "No hay transferencias con importes diferentes a Odoo.",
+    fileName: "diferencias-transferencias-mp",
+  },
+  transferMissingSystem: {
+    label: "Transferencias MP sin Odoo",
+    empty: "Todas las transferencias de Rosario Centro aparecen en Odoo.",
+    fileName: "transferencias-mp-sin-odoo",
+  },
 };
 
 const reportColumns = [
@@ -52,6 +63,13 @@ const reportColumns = [
   ["totalPayment", "Total Pago", true],
   ["mpOperationValue", "Valor de la operación en MP", true],
   ["memo", "Memo", false],
+];
+
+const transferReportColumns = [
+  ["transferNumber", "Número", false],
+  ["transferLocation", "Sucursal", false],
+  ["transferAmount", "Importe", true],
+  ["transferDate", "Fecha", false],
 ];
 
 const selectors = {
@@ -67,14 +85,19 @@ const selectors = {
   cancelLocationLogin: document.querySelector("#cancelLocationLogin"),
   mpFile: document.querySelector("#mpFile"),
   sysFile: document.querySelector("#sysFile"),
+  transferFile: document.querySelector("#transferFile"),
   mpStatus: document.querySelector("#mpStatus"),
   sysStatus: document.querySelector("#sysStatus"),
+  transferStatus: document.querySelector("#transferStatus"),
   mpPanel: document.querySelector("#mpPanel"),
   sysPanel: document.querySelector("#sysPanel"),
+  transferPanel: document.querySelector("#transferPanel"),
   mpDropAction: document.querySelector("#mpDropAction"),
   sysDropAction: document.querySelector("#sysDropAction"),
+  transferDropAction: document.querySelector("#transferDropAction"),
   mpDropDetail: document.querySelector("#mpDropDetail"),
   sysDropDetail: document.querySelector("#sysDropDetail"),
+  transferDropDetail: document.querySelector("#transferDropDetail"),
   compareButton: document.querySelector("#compareButton"),
   exportButton: document.querySelector("#exportButton"),
   saveReportButton: document.querySelector("#saveReportButton"),
@@ -84,6 +107,8 @@ const selectors = {
   missingMpCount: document.querySelector("#missingMpCount"),
   missingSystemCount: document.querySelector("#missingSystemCount"),
   emptyMemoCount: document.querySelector("#emptyMemoCount"),
+  transferDiffCount: document.querySelector("#transferDiffCount"),
+  transferMissingCount: document.querySelector("#transferMissingCount"),
   reconciliationSummary: document.querySelector("#reconciliationSummary"),
   activeReportTitle: document.querySelector("#activeReportTitle"),
   reportTabs: document.querySelector("#reportTabs"),
@@ -98,6 +123,7 @@ const selectors = {
 
 selectors.mpFile.addEventListener("change", (event) => handleFile(event, "mp"));
 selectors.sysFile.addEventListener("change", (event) => handleFile(event, "sys"));
+selectors.transferFile.addEventListener("change", (event) => handleFile(event, "transfer"));
 selectors.compareButton.addEventListener("click", compareFiles);
 selectors.exportButton.addEventListener("click", exportActiveReport);
 selectors.saveReportButton.addEventListener("click", saveActiveReport);
@@ -135,6 +161,8 @@ function createEmptyReport() {
     emptyMemo: [],
     matches: [],
     missingSystem: [],
+    transferDifferences: [],
+    transferMissingSystem: [],
   };
 }
 
@@ -144,7 +172,12 @@ async function handleFile(event, sourceKey) {
 
   try {
     const parsed = await parseFile(file);
-    const rows = sourceKey === "mp" ? filterMpRowsByLocation(parsed) : parsed.rows;
+    const rows =
+      sourceKey === "mp"
+        ? filterMpRowsByLocation(parsed)
+        : sourceKey === "transfer"
+          ? filterTransferRowsByCurrentMonth(parsed)
+          : parsed.rows;
     state[sourceKey] = {
       rows,
       headers: parsed.headers,
@@ -158,6 +191,8 @@ async function handleFile(event, sourceKey) {
       sourceKey,
       sourceKey === "mp"
         ? `Cargado: ${rows.length} filas de ${locations[state.location]} del mes actual`
+        : sourceKey === "transfer"
+          ? `Cargado: ${rows.length} filas del mes actual`
         : `Cargado: ${rows.length} filas`
     );
     updateCompareState();
@@ -166,6 +201,19 @@ async function handleFile(event, sourceKey) {
     updateStatus(sourceKey, "Error");
     alert(`No se pudo leer ${file.name}: ${error.message}`);
   }
+}
+
+function filterTransferRowsByCurrentMonth(parsed) {
+  const requiredColumns = ["B", "G", "H", "AA"];
+  const missingColumn = requiredColumns.find(
+    (letter) => !getHeaderByColumnLetter(parsed.headers, letter)
+  );
+  if (missingColumn) {
+    throw new Error(`el archivo de Transferencias MP no tiene columna ${missingColumn}`);
+  }
+
+  const dateColumn = getHeaderByColumnLetter(parsed.headers, "G");
+  return parsed.rows.filter((row) => isDateInCurrentMonth(row[dateColumn]));
 }
 
 function filterMpRowsByLocation(parsed) {
@@ -389,13 +437,18 @@ function updateStatus(sourceKey, text) {
 function updateCompareState() {
   const mpColumns = getPreferredColumns("mp", state.mp.headers);
   const sysColumns = getPreferredColumns("sys", state.sys.headers);
+  const transferReady = ["B", "G", "H", "AA"].every((letter) =>
+    getHeaderByColumnLetter(state.transfer.headers, letter)
+  );
   const ready =
     state.mp.rows.length > 0 &&
     state.sys.rows.length > 0 &&
+    state.transfer.rows.length > 0 &&
     mpColumns.sale &&
     mpColumns.amount &&
     sysColumns.sale &&
-    sysColumns.amount;
+    sysColumns.amount &&
+    transferReady;
 
   selectors.compareButton.disabled = !ready;
 }
@@ -438,6 +491,8 @@ function compareFiles() {
     }
   });
 
+  compareTransferFiles(report);
+
   state.report = report;
   state.activeReport = "differences";
   renderMetrics({
@@ -446,6 +501,47 @@ function compareFiles() {
     sysIndex,
   });
   renderTable();
+}
+
+function compareTransferFiles(report) {
+  const odooRowsCurrentMonth = state.sys.rows.filter((row) =>
+    isDateInCurrentMonth(getValueByColumnLetter(row, "sys", "A"))
+  );
+  const odooRecords = buildRecordMap(
+    odooRowsCurrentMonth,
+    getHeaderByColumnLetter(state.sys.headers, "G"),
+    getHeaderByColumnLetter(state.sys.headers, "F"),
+    "sys"
+  ).records;
+  const seenTransferNumbers = new Set();
+
+  state.transfer.rows.forEach((row) => {
+    const transferNumber = normalizeSaleNumber(getValueByColumnLetter(row, "transfer", "B"));
+    if (!transferNumber || seenTransferNumbers.has(transferNumber)) return;
+    seenTransferNumbers.add(transferNumber);
+
+    const transferRecord = createTransferRecord(row);
+    const odooRecord = odooRecords.get(transferNumber);
+    if (!odooRecord) {
+      if (normalizeLocationName(transferRecord.transferLocation) === "rosario centro") {
+        report.transferMissingSystem.push(transferRecord);
+      }
+      return;
+    }
+
+    if (roundMoney(transferRecord.transferAmount - odooRecord.amount) !== 0) {
+      report.transferDifferences.push(transferRecord);
+    }
+  });
+}
+
+function createTransferRecord(row) {
+  return {
+    transferNumber: getValueByColumnLetter(row, "transfer", "B"),
+    transferLocation: getValueByColumnLetter(row, "transfer", "AA"),
+    transferAmount: parseMoney(getValueByColumnLetter(row, "transfer", "H")),
+    transferDate: getValueByColumnLetter(row, "transfer", "G"),
+  };
 }
 
 function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
@@ -546,6 +642,8 @@ function renderMetrics(details) {
   selectors.missingMpCount.textContent = state.report.missingMp.length;
   selectors.missingSystemCount.textContent = state.report.missingSystem.length;
   selectors.emptyMemoCount.textContent = state.report.emptyMemo.length;
+  selectors.transferDiffCount.textContent = state.report.transferDifferences.length;
+  selectors.transferMissingCount.textContent = state.report.transferMissingSystem.length;
 
   if (typeof details === "number") {
     selectors.reconciliationSummary.hidden = true;
@@ -576,22 +674,29 @@ function handleReportTabClick(event) {
 function renderTable() {
   const rows = getActiveRows();
   const reportType = reportTypes[state.activeReport];
+  const columns = getReportColumns(state.activeReport);
 
   selectors.activeReportTitle.textContent = reportType.label;
   selectors.reportTabs.querySelectorAll("[data-report-type]").forEach((button) => {
     button.classList.toggle("active", button.dataset.reportType === state.activeReport);
   });
-  selectors.reportHead.innerHTML = `<tr>${reportColumns.map(([, label]) => `<th>${label}</th>`).join("")}</tr>`;
-  selectors.reportBody.innerHTML = rows.map(createTableRow).join("");
+  selectors.reportHead.innerHTML = `<tr>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr>`;
+  selectors.reportBody.innerHTML = rows.map((row) => createTableRow(row, columns)).join("");
   selectors.emptyState.textContent =
-    state.mp.rows.length && state.sys.rows.length ? reportType.empty : "Cargá ambos archivos para comparar.";
+    state.mp.rows.length && state.sys.rows.length && state.transfer.rows.length
+      ? reportType.empty
+      : "Cargá los tres archivos para comparar.";
   selectors.emptyState.hidden = rows.length > 0;
   selectors.exportButton.disabled = rows.length === 0;
   selectors.saveReportButton.disabled = rows.length === 0;
 }
 
-function createTableRow(row) {
-  return `<tr>${reportColumns
+function getReportColumns(reportType) {
+  return reportType.startsWith("transfer") ? transferReportColumns : reportColumns;
+}
+
+function createTableRow(row, columns) {
+  return `<tr>${columns
     .map(([key, , isAmount]) => {
       const value = isAmount ? formatMoney(row[key]) : escapeHtml(row[key]);
       return `<td${isAmount ? ' class="amount"' : ""}>${value}</td>`;
@@ -617,14 +722,15 @@ function escapeHtml(value) {
 }
 
 function exportActiveReport() {
-  exportRows(reportTypes[state.activeReport].fileName, getActiveRows());
+  exportRows(reportTypes[state.activeReport].fileName, getActiveRows(), state.activeReport);
 }
 
-function exportRows(name, rows) {
+function exportRows(name, rows, reportType = "differences") {
   if (!rows.length || !window.XLSX) return;
 
+  const columns = getReportColumns(reportType);
   const exportRows = rows.map((row) =>
-    Object.fromEntries(reportColumns.map(([key, label]) => [label, row[key] ?? ""]))
+    Object.fromEntries(columns.map(([key, label]) => [label, row[key] ?? ""]))
   );
   const worksheet = XLSX.utils.json_to_sheet(exportRows);
   const workbook = XLSX.utils.book_new();
@@ -644,6 +750,7 @@ async function saveActiveReport() {
     sourceFiles: {
       mp: state.mp.fileName,
       sys: state.sys.fileName,
+      transfer: state.transfer.fileName,
     },
     rows: rows.map((row) => ({ ...row })),
   });
@@ -800,7 +907,7 @@ function renderSavedReports() {
           <div>
             <strong>${escapeHtml(report.label)}</strong>
             <span>${formatSavedDate(report.createdAt)} · ${report.rows.length} filas</span>
-            <small>MP: ${escapeHtml(report.sourceFiles?.mp || "-")} · Odoo: ${escapeHtml(report.sourceFiles?.sys || "-")}</small>
+            <small>MP: ${escapeHtml(report.sourceFiles?.mp || "-")} · Odoo: ${escapeHtml(report.sourceFiles?.sys || "-")} · Transferencias: ${escapeHtml(report.sourceFiles?.transfer || "-")}</small>
           </div>
           <div class="saved-report-actions">
             <button class="small-button ghost-button" type="button" data-action="export" data-report-id="${report.id}">Excel</button>
@@ -828,7 +935,7 @@ async function handleSavedReportAction(event) {
   if (!report) return;
 
   if (button.dataset.action === "export") {
-    exportRows(reportTypes[report.type]?.fileName || "reporte-guardado", report.rows);
+    exportRows(reportTypes[report.type]?.fileName || "reporte-guardado", report.rows, report.type);
     return;
   }
 
@@ -855,12 +962,15 @@ async function handleSavedReportAction(event) {
 function resetApp() {
   state.mp = createSourceState();
   state.sys = createSourceState();
+  state.transfer = createSourceState();
   state.report = createEmptyReport();
   state.activeReport = "differences";
   selectors.mpFile.value = "";
   selectors.sysFile.value = "";
+  selectors.transferFile.value = "";
   updateStatus("mp", "Sin archivo");
   updateStatus("sys", "Sin archivo");
+  updateStatus("transfer", "Sin archivo");
   updateCompareState();
   renderMetrics(0);
   renderTable();

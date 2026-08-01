@@ -85,3 +85,10 @@
 | 10:11 | test: node --check app.js y git diff --check OK |
 | 11:28 | fix(sync): subir reportes locales pendientes al recuperar conexion |
 | 11:28 | test: node --check app.js y git diff --check OK |
+
+### 2026-08-01
+
+| Hora | Cambio |
+|------|--------|
+| 20:28 | feat(web): agregar carga y reportes de Transferencias MP contra Odoo |
+| 20:28 | test: git diff --check y carga headless en Edge OK; node no disponible |
