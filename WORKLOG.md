@@ -99,3 +99,5 @@
 | 20:49 | test: validar Excel real (3637 filas), git diff --check y carga headless OK |
 | 20:53 | feat(web): agregar selector mensual global para MP, Odoo y Transferencias MP |
 | 20:53 | test: git diff --check, selectores HTML y carga headless en Edge OK |
+| 20:57 | style(web): alinear métricas y aclarar mes aplicado a los tres archivos |
+| 20:57 | test: git diff --check y carga headless en Edge OK |

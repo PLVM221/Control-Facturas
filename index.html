@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Control de facturación</title>
-    <link rel="stylesheet" href="styles.css?v=20260801-3" />
+    <link rel="stylesheet" href="styles.css?v=20260801-4" />
     <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script defer src="supabase-config.js?v=20260604-3"></script>
     <script defer src="app.js?v=20260801-4"></script>
@@ -91,6 +91,7 @@
         <label class="month-control">
           Mes a controlar
           <input id="controlMonth" type="month" />
+          <small>Aplica a los 3 archivos</small>
         </label>
         <button id="compareButton" type="button" disabled>Comparar</button>
         <button id="exportButton" type="button" disabled>Exportar reporte actual</button>

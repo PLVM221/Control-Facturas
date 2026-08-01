@@ -379,6 +379,12 @@ input[type="number"] {
   background: #ffffff;
 }
 
+.month-control small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .transaction-search {
   display: flex;
   flex: 1 1 360px;
@@ -407,13 +413,17 @@ input[type="number"] {
 }
 
 .metric {
+  display: grid;
+  grid-template-rows: 44px auto;
+  align-content: center;
   min-height: 92px;
   padding: 18px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
 }
 
 .metric span {
-  display: block;
+  display: flex;
+  align-items: center;
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
