@@ -14,6 +14,7 @@ const supabaseConfig = window.SUPABASE_CONFIG || {};
 const state = {
   location: "",
   pendingLocation: "",
+  controlMonth: getCurrentMonthValue(),
   mp: createSourceState(),
   sys: createSourceState(),
   transfer: createSourceState(),
@@ -112,6 +113,7 @@ const selectors = {
   mpDropDetail: document.querySelector("#mpDropDetail"),
   sysDropDetail: document.querySelector("#sysDropDetail"),
   transferDropDetail: document.querySelector("#transferDropDetail"),
+  controlMonth: document.querySelector("#controlMonth"),
   transactionSearch: document.querySelector("#transactionSearch"),
   transactionQuery: document.querySelector("#transactionQuery"),
   searchTransactionButton: document.querySelector("#searchTransactionButton"),
@@ -141,6 +143,7 @@ const selectors = {
 selectors.mpFile.addEventListener("change", (event) => handleFile(event, "mp"));
 selectors.sysFile.addEventListener("change", (event) => handleFile(event, "sys"));
 selectors.transferFile.addEventListener("change", (event) => handleFile(event, "transfer"));
+selectors.controlMonth.addEventListener("change", handleControlMonthChange);
 selectors.transactionSearch.addEventListener("submit", searchTransaction);
 selectors.compareButton.addEventListener("click", compareFiles);
 selectors.exportButton.addEventListener("click", exportActiveReport);
@@ -157,6 +160,8 @@ window.setInterval(() => {
   if (!selectors.syncStatus.classList.contains("ready")) retrySavedReportsSync();
 }, 30000);
 
+selectors.controlMonth.value = state.controlMonth;
+
 const sessionLocation = sessionStorage.getItem(ACTIVE_LOCATION_KEY);
 if (locations[sessionLocation]) {
   selectLocation(sessionLocation);
@@ -166,6 +171,7 @@ if (locations[sessionLocation]) {
 
 function createSourceState() {
   return {
+    allRows: [],
     rows: [],
     headers: [],
     fileName: "",
@@ -191,13 +197,10 @@ async function handleFile(event, sourceKey) {
 
   try {
     const parsed = await parseFile(file);
-    const rows =
-      sourceKey === "mp"
-        ? filterMpRowsByLocation(parsed)
-        : sourceKey === "transfer"
-          ? filterTransferRowsByCurrentMonth(parsed)
-          : parsed.rows;
+    validateSourceColumns(sourceKey, parsed.headers);
+    const rows = filterSourceRows(sourceKey, parsed.rows, parsed.headers);
     state[sourceKey] = {
+      allRows: parsed.rows,
       rows,
       headers: parsed.headers,
       fileName: file.name,
@@ -206,14 +209,7 @@ async function handleFile(event, sourceKey) {
     state.report = createEmptyReport();
     renderMetrics(0);
     renderTable();
-    updateStatus(
-      sourceKey,
-      sourceKey === "mp"
-        ? `Cargado: ${rows.length} filas de ${locations[state.location]} del mes actual`
-        : sourceKey === "transfer"
-          ? `Cargado: ${rows.length} filas del mes actual`
-        : `Cargado: ${rows.length} filas`
-    );
+    updateStatus(sourceKey, getLoadedStatus(sourceKey));
     updateCompareState();
   } catch (error) {
     state[sourceKey] = createSourceState();
@@ -222,47 +218,82 @@ async function handleFile(event, sourceKey) {
   }
 }
 
-function filterTransferRowsByCurrentMonth(parsed) {
-  const requiredColumns = ["B", "G", "H", "K", "AA"];
+function validateSourceColumns(sourceKey, headers) {
+  const requiredColumns = {
+    mp: ["B", "N"],
+    sys: ["A"],
+    transfer: ["B", "G", "H", "K", "AA"],
+  }[sourceKey];
   const missingColumn = requiredColumns.find(
-    (letter) => !getHeaderByColumnLetter(parsed.headers, letter)
+    (letter) => !getHeaderByColumnLetter(headers, letter)
   );
   if (missingColumn) {
-    throw new Error(`el archivo de Transferencias MP no tiene columna ${missingColumn}`);
+    const sourceName =
+      sourceKey === "mp" ? "Mercado Pago" : sourceKey === "sys" ? "Odoo" : "Transferencias MP";
+    throw new Error(`el archivo de ${sourceName} no tiene columna ${missingColumn}`);
   }
-
-  const dateColumn = getHeaderByColumnLetter(parsed.headers, "K");
-  return parsed.rows.filter((row) => isDateInCurrentMonth(row[dateColumn]));
 }
 
-function filterMpRowsByLocation(parsed) {
-  const locationColumn = getHeaderByColumnLetter(parsed.headers, "N");
-  const dateColumn = getHeaderByColumnLetter(parsed.headers, "B");
-  if (!locationColumn) {
-    throw new Error("el archivo de Mercado Pago no tiene columna N");
-  }
-  if (!dateColumn) {
-    throw new Error("el archivo de Mercado Pago no tiene columna B");
-  }
-
+function filterSourceRows(sourceKey, rows, headers) {
+  const dateLetters = { mp: "B", sys: "A", transfer: "K" };
+  const dateColumn = getHeaderByColumnLetter(headers, dateLetters[sourceKey]);
   const expectedLocation = normalizeLocationName(locations[state.location]);
-  return parsed.rows.filter(
+  const locationColumn =
+    sourceKey === "mp" ? getHeaderByColumnLetter(headers, "N") : "";
+
+  return rows.filter(
     (row) =>
-      normalizeLocationName(row[locationColumn]) === expectedLocation &&
-      isDateInCurrentMonth(row[dateColumn])
+      isDateInControlMonth(row[dateColumn]) &&
+      (sourceKey !== "mp" || normalizeLocationName(row[locationColumn]) === expectedLocation)
   );
+}
+
+function getLoadedStatus(sourceKey) {
+  const monthLabel = formatControlMonth(state.controlMonth);
+  const locationLabel = sourceKey === "mp" ? ` de ${locations[state.location]}` : "";
+  return `Cargado: ${state[sourceKey].rows.length} filas${locationLabel} · ${monthLabel}`;
+}
+
+function handleControlMonthChange() {
+  if (!selectors.controlMonth.value) return;
+  state.controlMonth = selectors.controlMonth.value;
+
+  ["mp", "sys", "transfer"].forEach((sourceKey) => {
+    const source = state[sourceKey];
+    if (!source.fileName) return;
+    source.rows = filterSourceRows(sourceKey, source.allRows, source.headers);
+    updateStatus(sourceKey, getLoadedStatus(sourceKey));
+  });
+
+  state.report = createEmptyReport();
+  state.activeReport = "differences";
+  renderMetrics(0);
+  renderTable();
+  updateCompareState();
 }
 
 function normalizeLocationName(value) {
   return String(value ?? "").trim().toLocaleLowerCase("es-AR");
 }
 
-function isDateInCurrentMonth(value, now = new Date()) {
+function getCurrentMonthValue(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatControlMonth(value) {
+  const [year, month] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(
+    new Date(year, month - 1, 1)
+  );
+}
+
+function isDateInControlMonth(value, controlMonth = state.controlMonth) {
   const date = parseTransactionDate(value);
+  const [year, month] = controlMonth.split("-").map(Number);
   return Boolean(
     date &&
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth()
+      date.getFullYear() === year &&
+      date.getMonth() === month - 1
   );
 }
 
@@ -578,11 +609,8 @@ function compareFiles() {
 }
 
 function compareTransferFiles(report) {
-  const odooRowsCurrentMonth = state.sys.rows.filter((row) =>
-    isDateInCurrentMonth(getValueByColumnLetter(row, "sys", "A"))
-  );
   const odooRecords = buildRecordMap(
-    odooRowsCurrentMonth,
+    state.sys.rows,
     getHeaderByColumnLetter(state.sys.headers, "G"),
     getHeaderByColumnLetter(state.sys.headers, "F"),
     "sys"

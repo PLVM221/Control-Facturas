@@ -366,6 +366,19 @@ input[type="number"] {
   padding: 14px;
 }
 
+.month-control {
+  min-width: 170px;
+}
+
+.month-control input {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 12px;
+  color: var(--text);
+  background: #ffffff;
+}
+
 .transaction-search {
   display: flex;
   flex: 1 1 360px;
