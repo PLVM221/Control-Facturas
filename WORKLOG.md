@@ -92,3 +92,4 @@
 |------|--------|
 | 20:28 | feat(web): agregar carga y reportes de Transferencias MP contra Odoo |
 | 20:28 | test: git diff --check y carga headless en Edge OK; node no disponible |
+| 20:33 | deploy(web): permitir main en ambiente github-pages y verificar cargador Transferencias MP online |
