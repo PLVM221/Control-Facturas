@@ -95,3 +95,5 @@
 | 20:33 | deploy(web): permitir main en ambiente github-pages y verificar cargador Transferencias MP online |
 | 20:38 | feat(web): agregar búsqueda de transacciones en MP, Odoo y Transferencias MP |
 | 20:38 | test: git diff --check, selectores HTML y carga headless en Edge OK |
+| 20:49 | fix(web): usar fecha K y mostrar B/AA/H/G en Transferencias MP |
+| 20:49 | test: validar Excel real (3637 filas), git diff --check y carga headless OK |

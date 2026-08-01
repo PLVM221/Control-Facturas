@@ -74,7 +74,7 @@ const transferReportColumns = [
   ["transferNumber", "Número", false],
   ["transferLocation", "Sucursal", false],
   ["transferAmount", "Importe", true],
-  ["transferDate", "Fecha", false],
+  ["transferType", "Tipo de operación", false],
 ];
 
 const transactionSearchColumns = [
@@ -83,7 +83,7 @@ const transactionSearchColumns = [
   ["number", "Número", false],
   ["detail", "Diario / Sucursal", false],
   ["amount", "Importe", true],
-  ["memo", "Memo", false],
+  ["memo", "Memo / Tipo de operación", false],
 ];
 
 const selectors = {
@@ -223,7 +223,7 @@ async function handleFile(event, sourceKey) {
 }
 
 function filterTransferRowsByCurrentMonth(parsed) {
-  const requiredColumns = ["B", "G", "H", "AA"];
+  const requiredColumns = ["B", "G", "H", "K", "AA"];
   const missingColumn = requiredColumns.find(
     (letter) => !getHeaderByColumnLetter(parsed.headers, letter)
   );
@@ -231,7 +231,7 @@ function filterTransferRowsByCurrentMonth(parsed) {
     throw new Error(`el archivo de Transferencias MP no tiene columna ${missingColumn}`);
   }
 
-  const dateColumn = getHeaderByColumnLetter(parsed.headers, "G");
+  const dateColumn = getHeaderByColumnLetter(parsed.headers, "K");
   return parsed.rows.filter((row) => isDateInCurrentMonth(row[dateColumn]));
 }
 
@@ -444,7 +444,7 @@ function updateStatus(sourceKey, text) {
   const panel = selectors[`${sourceKey}Panel`];
   const dropAction = selectors[`${sourceKey}DropAction`];
   const dropDetail = selectors[`${sourceKey}DropDetail`];
-  const ready = state[sourceKey].rows.length > 0;
+  const ready = Boolean(state[sourceKey].fileName);
 
   status.textContent = text;
   status.classList.toggle("ready", ready);
@@ -456,13 +456,13 @@ function updateStatus(sourceKey, text) {
 function updateCompareState() {
   const mpColumns = getPreferredColumns("mp", state.mp.headers);
   const sysColumns = getPreferredColumns("sys", state.sys.headers);
-  const transferReady = ["B", "G", "H", "AA"].every((letter) =>
+  const transferReady = ["B", "G", "H", "K", "AA"].every((letter) =>
     getHeaderByColumnLetter(state.transfer.headers, letter)
   );
   const ready =
     state.mp.rows.length > 0 &&
     state.sys.rows.length > 0 &&
-    state.transfer.rows.length > 0 &&
+    state.transfer.fileName &&
     mpColumns.sale &&
     mpColumns.amount &&
     sysColumns.sale &&
@@ -471,7 +471,7 @@ function updateCompareState() {
 
   selectors.compareButton.disabled = !ready;
   selectors.searchTransactionButton.disabled = !(
-    state.mp.rows.length || state.sys.rows.length || state.transfer.rows.length
+    state.mp.fileName || state.sys.fileName || state.transfer.fileName
   );
 }
 
@@ -514,11 +514,11 @@ function searchTransaction(event) {
     if (normalizeSaleNumber(getValueByColumnLetter(row, "transfer", "B")) !== query) return;
     results.push({
       source: "Transferencias MP",
-      date: getValueByColumnLetter(row, "transfer", "G"),
+      date: getValueByColumnLetter(row, "transfer", "K"),
       number: getValueByColumnLetter(row, "transfer", "B"),
       detail: getValueByColumnLetter(row, "transfer", "AA"),
       amount: parseMoney(getValueByColumnLetter(row, "transfer", "H")),
-      memo: "",
+      memo: getValueByColumnLetter(row, "transfer", "G"),
     });
   });
 
@@ -614,7 +614,7 @@ function createTransferRecord(row) {
     transferNumber: getValueByColumnLetter(row, "transfer", "B"),
     transferLocation: getValueByColumnLetter(row, "transfer", "AA"),
     transferAmount: parseMoney(getValueByColumnLetter(row, "transfer", "H")),
-    transferDate: getValueByColumnLetter(row, "transfer", "G"),
+    transferType: getValueByColumnLetter(row, "transfer", "G"),
   };
 }
 
@@ -756,13 +756,13 @@ function renderTable() {
   });
   selectors.reportHead.innerHTML = `<tr>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr>`;
   selectors.reportBody.innerHTML = rows.map((row) => createTableRow(row, columns)).join("");
-  const hasAnySource = state.mp.rows.length || state.sys.rows.length || state.transfer.rows.length;
+  const hasAnySource = state.mp.fileName || state.sys.fileName || state.transfer.fileName;
   selectors.emptyState.textContent =
     state.activeReport === "transactionSearch"
       ? hasAnySource
         ? reportType.empty
         : "Cargá al menos un archivo para buscar."
-      : state.mp.rows.length && state.sys.rows.length && state.transfer.rows.length
+      : state.mp.fileName && state.sys.fileName && state.transfer.fileName
         ? reportType.empty
         : "Cargá los tres archivos para comparar.";
   selectors.emptyState.hidden = rows.length > 0;
@@ -903,6 +903,15 @@ function loadLocalSavedReports() {
 function normalizeSavedReport(report) {
   if (report.type === "emptyMemo" && report.label === "Ventas sin Memo") {
     return { ...report, label: reportTypes.emptyMemo.label };
+  }
+  if (report.type?.startsWith("transfer")) {
+    return {
+      ...report,
+      rows: report.rows.map((row) => ({
+        ...row,
+        transferType: row.transferType ?? row.transferDate ?? "",
+      })),
+    };
   }
   return report;
 }
