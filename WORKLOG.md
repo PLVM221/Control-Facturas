@@ -105,3 +105,5 @@
 | 21:00 | test: git diff --check y carga headless en Edge OK |
 | 21:02 | style(web): agregar pie Desarrollado por PLVM Soft |
 | 21:02 | test: git diff --check y carga headless en Edge OK |
+| 21:16 | feat(web): mostrar importe Odoo, conservar duplicados y resaltar diferencias desde $80 |
+| 21:16 | test: git diff --check, selectores HTML y carga headless en Edge OK |

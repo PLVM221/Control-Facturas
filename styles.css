@@ -562,6 +562,11 @@ tbody tr:hover {
   background: rgba(0, 113, 227, 0.045);
 }
 
+tbody tr.significant-difference,
+tbody tr.significant-difference:hover {
+  background: rgba(36, 138, 61, 0.16);
+}
+
 td.amount {
   text-align: center;
   font-variant-numeric: tabular-nums;

@@ -75,7 +75,8 @@ const transferReportColumns = [
   ["transferDate", "Fecha", false],
   ["transferNumber", "Número", false],
   ["transferLocation", "Sucursal", false],
-  ["transferAmount", "Importe", true],
+  ["transferAmount", "Importe Transferencias MP", true],
+  ["transferOdooAmount", "Importe Odoo", true],
   ["transferType", "Tipo de operación", false],
 ];
 
@@ -576,24 +577,30 @@ function compareFiles() {
   });
 
   allSaleNumbers.forEach((saleNumber) => {
-    const mpRecord = mpRecords.get(saleNumber);
-    const sysRecord = sysRecords.get(saleNumber);
+    const mpSaleRecords = mpRecords.get(saleNumber) || [];
+    const sysSaleRecords = sysRecords.get(saleNumber) || [];
+    const occurrenceCount = Math.max(mpSaleRecords.length, sysSaleRecords.length);
 
-    if (!mpRecord) {
-      report.missingMp.push(createReportRow(null, sysRecord));
-      return;
-    }
+    for (let index = 0; index < occurrenceCount; index += 1) {
+      const mpRecord = mpSaleRecords[index] || mpSaleRecords[0];
+      const sysRecord = sysSaleRecords[index] || sysSaleRecords[0];
 
-    if (!sysRecord) {
-      report.missingSystem.push(createReportRow(mpRecord, null));
-      return;
-    }
+      if (!mpRecord) {
+        report.missingMp.push(createReportRow(null, sysRecord));
+        continue;
+      }
 
-    const row = createReportRow(mpRecord, sysRecord);
-    if (roundMoney(mpRecord.amount - sysRecord.amount) === 0) {
-      report.matches.push(row);
-    } else {
-      report.differences.push(row);
+      if (!sysRecord) {
+        report.missingSystem.push(createReportRow(mpRecord, null));
+        continue;
+      }
+
+      const row = createReportRow(mpRecord, sysRecord);
+      if (row.differenceAmount === 0) {
+        report.matches.push(row);
+      } else {
+        report.differences.push(row);
+      }
     }
   });
 
@@ -616,15 +623,17 @@ function compareTransferFiles(report) {
     getHeaderByColumnLetter(state.sys.headers, "F"),
     "sys"
   ).records;
-  const seenTransferNumbers = new Set();
+  const transferOccurrences = new Map();
 
   state.transfer.rows.forEach((row) => {
     const transferNumber = normalizeSaleNumber(getValueByColumnLetter(row, "transfer", "B"));
-    if (!transferNumber || seenTransferNumbers.has(transferNumber)) return;
-    seenTransferNumbers.add(transferNumber);
+    if (!transferNumber) return;
 
-    const transferRecord = createTransferRecord(row);
-    const odooRecord = odooRecords.get(transferNumber);
+    const occurrenceIndex = transferOccurrences.get(transferNumber) || 0;
+    transferOccurrences.set(transferNumber, occurrenceIndex + 1);
+    const matchingOdooRecords = odooRecords.get(transferNumber) || [];
+    const odooRecord = matchingOdooRecords[occurrenceIndex] || matchingOdooRecords[0];
+    const transferRecord = createTransferRecord(row, odooRecord);
     if (!odooRecord) {
       if (normalizeLocationName(transferRecord.transferLocation) === "rosario centro") {
         report.transferMissingSystem.push(transferRecord);
@@ -632,19 +641,22 @@ function compareTransferFiles(report) {
       return;
     }
 
-    if (roundMoney(transferRecord.transferAmount - odooRecord.amount) !== 0) {
+    if (transferRecord.differenceAmount !== 0) {
       report.transferDifferences.push(transferRecord);
     }
   });
 }
 
-function createTransferRecord(row) {
+function createTransferRecord(row, odooRecord = null) {
+  const transferAmount = parseMoney(getValueByColumnLetter(row, "transfer", "H"));
   return {
     transferDate: getValueByColumnLetter(row, "transfer", "K"),
     transferNumber: getValueByColumnLetter(row, "transfer", "B"),
     transferLocation: getValueByColumnLetter(row, "transfer", "AA"),
-    transferAmount: parseMoney(getValueByColumnLetter(row, "transfer", "H")),
+    transferAmount,
+    transferOdooAmount: odooRecord?.amount ?? null,
     transferType: getValueByColumnLetter(row, "transfer", "G"),
+    differenceAmount: odooRecord ? roundMoney(transferAmount - odooRecord.amount) : null,
   };
 }
 
@@ -662,10 +674,9 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
 
     if (records.has(saleNumber)) {
       duplicateRows += 1;
-      return;
     }
 
-    records.set(saleNumber, {
+    const record = {
       amount: parseMoney(row[amountColumn]),
       sourceValues:
         sourceKey === "sys"
@@ -675,7 +686,10 @@ function buildRecordMap(rows, saleColumn, amountColumn, sourceKey) {
               number: getValueByColumnLetter(row, "mp", "K"),
               mpOperationValue: parseMoney(getValueByColumnLetter(row, "mp", "Q")),
             },
-    });
+    };
+    const saleRecords = records.get(saleNumber) || [];
+    saleRecords.push(record);
+    records.set(saleNumber, saleRecords);
   });
 
   return {
@@ -736,6 +750,8 @@ function createReportRow(mpRecord, sysRecord) {
     totalPayment: sysRecord?.sourceValues.totalPayment ?? null,
     mpOperationValue: mpRecord?.sourceValues.mpOperationValue ?? null,
     memo: sysRecord?.sourceValues.memo ?? "",
+    differenceAmount:
+      mpRecord && sysRecord ? roundMoney(mpRecord.amount - sysRecord.amount) : null,
   };
 }
 
@@ -754,11 +770,10 @@ function renderMetrics(details) {
     return;
   }
 
-  const odooDuplicates = details.sysIndex.duplicateRows;
   selectors.reconciliationSummary.innerHTML = `
     <div>
       <strong>Cómo cierra Odoo</strong>
-      <span>${state.sys.rows.length} filas = ${matches} coincidencias + ${state.report.missingMp.length} sin Mercado Pago + ${state.report.emptyMemo.length} sin MP${odooDuplicates ? ` + ${odooDuplicates} duplicadas` : ""}</span>
+      <span>${state.sys.rows.length} filas = ${matches} coincidencias + ${state.report.missingMp.length} sin Mercado Pago + ${state.report.emptyMemo.length} sin MP</span>
     </div>
   `;
   selectors.reconciliationSummary.hidden = false;
@@ -806,7 +821,11 @@ function getReportColumns(reportType) {
 }
 
 function createTableRow(row, columns) {
-  return `<tr>${columns
+  const rowClass =
+    Number.isFinite(row.differenceAmount) && Math.abs(row.differenceAmount) >= 80
+      ? ' class="significant-difference"'
+      : "";
+  return `<tr${rowClass}>${columns
     .map(([key, , isAmount]) => {
       const value = isAmount ? formatMoney(row[key]) : escapeHtml(row[key]);
       return `<td${isAmount ? ' class="amount"' : ""}>${value}</td>`;
