@@ -103,3 +103,5 @@
 | 20:57 | test: git diff --check y carga headless en Edge OK |
 | 21:00 | feat(web): agregar fecha K como primera columna en reportes Transferencias MP |
 | 21:00 | test: git diff --check y carga headless en Edge OK |
+| 21:02 | style(web): agregar pie Desarrollado por PLVM Soft |
+| 21:02 | test: git diff --check y carga headless en Edge OK |

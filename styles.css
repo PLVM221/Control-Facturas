@@ -637,6 +637,14 @@ td.amount {
   text-align: center;
 }
 
+.app-footer {
+  padding: 28px 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
 @media (max-width: 780px) {
   .app-shell {
     width: min(100% - 20px, 1180px);
