@@ -72,6 +72,7 @@ const reportColumns = [
 ];
 
 const transferReportColumns = [
+  ["transferDate", "Fecha", false],
   ["transferNumber", "Número", false],
   ["transferLocation", "Sucursal", false],
   ["transferAmount", "Importe", true],
@@ -639,6 +640,7 @@ function compareTransferFiles(report) {
 
 function createTransferRecord(row) {
   return {
+    transferDate: getValueByColumnLetter(row, "transfer", "K"),
     transferNumber: getValueByColumnLetter(row, "transfer", "B"),
     transferLocation: getValueByColumnLetter(row, "transfer", "AA"),
     transferAmount: parseMoney(getValueByColumnLetter(row, "transfer", "H")),
@@ -935,10 +937,14 @@ function normalizeSavedReport(report) {
   if (report.type?.startsWith("transfer")) {
     return {
       ...report,
-      rows: report.rows.map((row) => ({
-        ...row,
-        transferType: row.transferType ?? row.transferDate ?? "",
-      })),
+      rows: report.rows.map((row) => {
+        const legacyTransferRow = row.transferType === undefined;
+        return {
+          ...row,
+          transferDate: legacyTransferRow ? "" : row.transferDate ?? "",
+          transferType: legacyTransferRow ? row.transferDate ?? "" : row.transferType,
+        };
+      }),
     };
   }
   return report;

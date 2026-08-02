@@ -101,3 +101,5 @@
 | 20:53 | test: git diff --check, selectores HTML y carga headless en Edge OK |
 | 20:57 | style(web): alinear métricas y aclarar mes aplicado a los tres archivos |
 | 20:57 | test: git diff --check y carga headless en Edge OK |
+| 21:00 | feat(web): agregar fecha K como primera columna en reportes Transferencias MP |
+| 21:00 | test: git diff --check y carga headless en Edge OK |
